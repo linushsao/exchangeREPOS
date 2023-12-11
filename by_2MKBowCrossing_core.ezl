@@ -134,7 +134,8 @@ variable: _OUTTER_CROSSING(2); //外穿越
 
         //for lineSTP
 		if _folio_POS_Line <>_folio_POS_Line[1] then 
-			_folio_POS_LineSTP =iff(_folio_POS_Line >0, low[1], high[1]);
+			_folio_POS_LineSTP =(iff(_folio_POS_Line >0, low[1], high[1]) 
+                                        +abs(_folio_POS_Line))*0.5;
 	end;
 
 
