@@ -1,0 +1,203 @@
+//
+input: cond[_len](trueFalseArrayRef);
+
+input: _My_CR_line(numericSeries);
+input: _My_K0_KPline(numericSeries);
+input: _My_CL_STPline(numericSeries);
+input: _My_K1_KPline(numericSeries);
+input: _qc_shortEX2(numericSeries);
+input: _qc_longEX2(numericSeries);
+input: _My_FOLIO_line(numericSeries);
+input: _extremes_Line_Upper(numericSeries);
+input: _extremes_Line_lower(numericSeries);
+input: _qc_long(numericSeries);
+input: _qc_short(numericSeries);
+input: _qc_longEX(numericSeries);
+input: _qc_shortEX(numericSeries);
+
+{input: _ENABLE_MorningClose(trueFalsesimple);}
+{input: _ENABLE_keepFolio(trueFalsesimple);}
+input: _ENABLE_SectionEND_Clp(trueFalsesimple);
+input: _SUSPEND_STR(trueFalsesimple);
+
+{input: ENABLE_LONG_PERIOD(trueFalsesimple);}
+input: _stdMID(numericSeries);
+
+//系統設定
+////保本係數(由底點往上計算占全部比例)
+{variable: _ratioU(0); //多保本係數
+variable: _ratioD(0); //空保本係數
+
+_ratioU =0.33;
+_ratioD =0.66;}
+
+//平倉條件
+///多平倉
+//k0停利
+cond[21] =high >=_My_K0_KPline
+			{and close <(_My_K0_KPline +_My_CR_line)*0.5}
+			and filled >0
+			and filled <>filled[1]
+			and _My_K0_KPline <>0 
+			;
+//停損
+cond[22] =open <_My_CL_STPline 
+			and close >_My_CL_STPline 
+			and filled >0
+			and _My_CL_STPline <>0
+			;
+//單K極值停利
+{cond[23] =qcofK >_qc_longEX2
+			and filled >0
+			and filled =filled[1]
+			;}
+//K1停利點
+cond[24] =close <_My_K1_KPline
+			and filled >0
+			and filled =filled[1]
+			and _My_K1_KPline <>0
+			;
+///空平倉
+//k0停利
+cond[26] =low <=_My_K0_KPline
+			{and close >(_My_K0_KPline +_My_CR_line)*0.5}
+			and filled <0
+			and filled <>filled[1]
+			and _My_K0_KPline <>0 
+			; 
+//停損
+cond[27] =open >_My_CL_STPline 
+			and close <_My_CL_STPline 
+			and filled <0
+			and _My_CL_STPline <>0
+			;
+//單K極值停利
+{cond[28] =qcofK <_qc_shortEX2
+			and filled <0
+			and filled =filled[1]
+			;}
+//K1停利點
+cond[29] =close >_My_K1_KPline 
+			and filled <0
+			and filled =filled[1]
+			and _My_K1_KPline <>0
+			;
+
+		
+////通用多空平倉(長週期)
+//////帳跌幅停損
+cond[31] =((qcofK <_qc_shortEX and filled >0)
+				or (qcofK >_qc_longEX and filled <0))
+			and filled =filled[1]
+			;
+			
+{cond[32] =_ENABLE_MorningClose
+			and time =084500
+			and filled <>0 
+			;}
+////
+variable: _night_clp(0);
+if time =084500
+    and filled <>0 then //檢查夜盤是否留倉
+begin
+    _night_clp =(high[1] +low[1])*0.5;    
+end
+else begin
+        _night_clp =0;
+    end;
+
+cond[32] =_night_clp <>0
+			and ((filled >0 and close <_night_clp) 
+					or (filled <0 and close >_night_clp));
+////			
+{variable: _to_My_FOLIO_line(0);
+_to_My_FOLIO_line =iff(filled >0, 
+							maxList(_My_FOLIO_line, _stdMID),
+							minList(_My_FOLIO_line, _stdMID));
+cond[33] =((open >=_to_My_FOLIO_line 
+					and close <_to_My_FOLIO_line
+					and filled >0)
+				or ((open <=_to_My_FOLIO_line 
+						and close >_to_My_FOLIO_line
+						and filled <0))
+			and filled =filled[1]
+			and _to_My_FOLIO_line <>0
+			)
+			;}
+variable: _folio_base(5);
+cond[33] ={(filled <>0)
+			and }(filled >0
+						and (high -filledAvgPrice) >_folio_base
+						and close <(open +high)*0.5) 
+					or (filled <0
+							and (low -filledAvgPrice) <_folio_base*-1
+							and close >(open +low)*0.5);
+//////極值鈍化
+{cond[34] =((filled >0
+					and _extremes_Line_Upper[1] =_extremes_Line_Upper[2]
+					and close >filledAvgPrice
+					and high >=_extremes_Line_Upper
+					and close <(high +high[1])*0.5
+					)
+				or (filled <0
+					and _extremes_Line_lower[1] =_extremes_Line_lower[2]
+					and close <filledAvgPrice
+					and low <=_extremes_Line_lower
+					and close >(low +low[1])*0.5
+					))
+			and filled =filled[1]
+			;}
+//////保本檢查.
+{variable: _qc_kp_long(0);
+variable: _qc_kp_short(0);
+_qc_kp_long  =open +_qc_long;
+_qc_kp_short =open +_qc_short;
+
+cond[35] =keep_folioBased(_qc_kp_long, 
+							_qc_kp_short,
+							_ratioU,
+							_ratioD)
+			and _ENABLE_keepFolio
+			;}
+//停損反向穿越極值帶
+{cond[36] =((filled >0
+					and low <_extremes_Line_lower
+					)
+				or (filled <0
+					and high <_extremes_Line_Upper
+					))
+			and filled =filled[1]
+			;}
+//停利_反向穿越前極值
+cond[37] =((filled >0
+					and low <low[1]
+					)
+				or (filled <0
+					and high <high[1]
+					))
+			and filled =filled[1]
+			;
+//停利_越過極值通道後反轉固定倍數
+{variable: _rev_ratio(0);
+_rev_ratio =0.66; //以多方而言
+
+cond[38] =((filled >0
+					and high >=_extremes_Line_Upper
+					and filledAvgPrice <_extremes_Line_Upper
+					and close <priceC_byRATIO(filledAvgPrice, _extremes_Line_Upper, 1-_rev_ratio)
+					)
+				or (filled <0
+					and low <=_extremes_Line_lower
+					and filledAvgPrice >_extremes_Line_lower
+					and close >priceC_byRATIO(filledAvgPrice, _extremes_Line_lower, _rev_ratio)
+					))
+			and filled =filled[1]
+			;}
+/////
+cond[39] =(trading_rest("_PeriodREST_midnight")
+				or trading_rest("_Endpoint_dayTrading")
+				)
+			and _ENABLE_SectionEND_Clp
+			and filled <>0;
+cond[40] =_SUSPEND_STR
+			and filled <>0;

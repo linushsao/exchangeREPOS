@@ -1,0 +1,52 @@
+//
+input: cond[_len](trueFalseArrayRef);
+
+{input: _LS_ratio(numericSimple);}
+
+input: _My_CR_line(numericSeries);
+input: _My_CR_line_RAW(numericSeries);
+input: _My_RE_line(numericSeries);
+
+//
+///多建倉
+{if _LS_ratio >0 then
+begin}
+	cond[11] =open <=_My_CR_line
+				and high >_My_CR_line
+				and _My_CR_line_RAW >0
+				{and _My_CR_line_RAW =_My_RE_line}
+				;
+{	cond[12] =open >_My_CR_line
+				and low <_My_CR_line
+				and close >_My_CR_line
+				and close >high[1]
+				and _My_CR_line_RAW >0
+				and _My_CR_line_RAW =_My_RE_line
+				;}
+	cond[13] =open <=_My_RE_line
+				and high >_My_RE_line
+				and _My_CR_line_RAW >0
+				and _My_RE_line <>0
+				;
+{end;}
+///空建倉
+{if _LS_ratio <0 then
+begin}
+	cond[16] =open >=_My_CR_line
+				and low <_My_CR_line
+				and _My_CR_line_RAW <0
+				{and _My_CR_line_RAW =_My_RE_line}
+				;
+{	cond[17] =open <_My_CR_line
+				and high >_My_CR_line
+				and close <_My_CR_line
+				and close <low[1]
+				and _My_CR_line_RAW <0
+				and _My_CR_line_RAW =_My_RE_line
+				;}
+	cond[18] =open >=_My_RE_line
+				and low <_My_RE_line
+				and _My_CR_line_RAW <0
+				and _My_RE_line <>0
+				;
+{end;}
