@@ -69,7 +69,7 @@ variable: _switch_mk_L(FALSE);
 variable: _switch_mk_S(FALSE);
 variable: _switch_opd_L(FALSE);
 variable: _switch_opd_S(FALSE);
-variable: interpreisist _time_CRP(0);
+variable: intraBarPersist _time_CRP(0);
 
 ///init
 _qc_sum      =0;
@@ -112,7 +112,7 @@ begin
     _switch_opd_L   =FALSE;
 
     //當雙MK線重合
-    if _marketPrice_avg_RAW -_marketPrice_avg_addone_RAW =0 then
+    if _marketPrice_avg_RAW =_marketPrice_avg_addone_RAW then
     begin
         //K標差漲幅>基本利數
         if _range_L >_folio_base then

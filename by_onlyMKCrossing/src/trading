@@ -1,3 +1,4 @@
+0443796996
 //
 //[0-1_參數設定區 ]
 input: _stdevSTAT(0.675, "定態區標差倍數");
@@ -218,7 +219,8 @@ by_onlyMKCrossing(
  _stdevUNSTAT,
  _stdevUUNSTAT,
 
- _marketPrice_avg_addone_RAW, //line for folioNtrend
+ _marketPrice_avg_RAW,          //line for trend
+ _marketPrice_avg_addone_RAW,   //line for CRP
 
  _folio_POS_Line, //line for CRP
  _folio_POS_LineCLP, //line for CLP
@@ -283,12 +285,12 @@ if _onREALTime and _My_CR_line =0
 then raiseRunTimeError(baseInfo("CrPRICE_IS_MISSING"));
 //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-//3-2_產生多空進出場訊號.
+//3-3_產生多空進出場訊號.
 array: cond[40](FALSE);
-array_toolkit_tf("_RESET",cond); 		//重置條件變數預設值FALSE
+array_toolkit_tf("_RESET",cond); 		//重置預設條件陣列變數預設值FALSE
 
 array: cond_extra[40](FALSE);
-array_toolkit_tf("_RESET",cond_extra); //重置條件變數預設值FALSE
+array_toolkit_tf("_RESET",cond_extra);  //重置啟用條件變數預設值FALSE
 //
 variable: _PRICE_PreCHECK(FALSE); //價位區間檢查
 variable: _IF_CrpLONG(FALSE); //做多判斷
@@ -310,8 +312,8 @@ _LS_ratio =_folio_NATU_StdBand;
 //進入建倉區段前檢查盤勢
 variable: _My_Cr_preCHECK(FALSE);
 
-cond_extra[1] =TRUE;
-cond_extra[3] =TRUE;
+cond_extra[1] =TRUE; //檢查條件1
+cond_extra[3] =TRUE; //檢查條件3
 
 _My_Cr_preCHECK =Cr_preCHECK_enlightment(
 									cond,
@@ -379,6 +381,7 @@ _shift_price_check =absValue(close -_My_CR_line) <=absValue(_shift_price)
 						or (absValue(close -_My_RE_line) <=absValue(_shift_price)
 								and _My_RE_line <>0)
 						or _shift_price =0;
+
 //[6_呼叫下單通用函式] >>執行建平倉	.	
 array: intraBarPersist _pos_timeL[5](0);
 array: intraBarPersist _pos_timeS[5](0);
@@ -424,18 +427,17 @@ variable: _filter_INFO("");
 _filter_INFO =condi2string(cond);
 
 if filled <>0 
-	and filledAvgPrice <>filledAvgPrice[1] 
-then 
+	and filledAvgPrice <>filledAvgPrice[1] then 
 begin
 	if filled >0 and _pos_timeL[_leng] <>time then reflash_Data("_Push_", _pos_timeL, time);
 	if filled <0 and _pos_timeS[_leng] <>time then reflash_Data("_Push_", _pos_timeS, time);
 end;
+
 //logger.
 if cond[39] then _return_info[3] =_suspend_msg
 else if _ENABLE_DEBUG then _return_info[3] ="除錯模式";
 
-if _ENABLE_LOGGER
-then
+if _ENABLE_LOGGER then
 logger_multi("",
 	text(
 		_LaunchDATE, ",", //_LaunchDATE
@@ -480,6 +482,8 @@ logger_multi("",
 		_return_info[3]
 		)
 	);
+
+
 
 if _SUSPEND_STR
 	and filled =0
