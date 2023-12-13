@@ -34,45 +34,45 @@ _ratioD =0.66;}
 //平倉條件
 ///多平倉
 //k0停利
-cond[21] =high >=_My_K0_KPline
+{cond[21] =high >=_My_K0_KPline
 			and filledAvgPrice <_My_K0_KPline
 			and filled >0
 			and filled <>filled[1]
 			and _My_K0_KPline <>0 
-			;
+			;}
 //停損
-cond[22] =filledAvgPrice >_My_CL_STPline 
+{cond[22] =filledAvgPrice >_My_CL_STPline 
 			and close <_My_CL_STPline 
 			and filled >0
 			and _My_CL_STPline <>0
-			;
+			;}
 //單Kn極值停利
 {cond[23] =qcofK >_qc_longEX2
 			and filled >0
 			and filled =filled[1]
 			;}
 //K1停利點
-cond[24] =filledAvgPrice <_My_K1_KPline
+{cond[24] =filledAvgPrice <_My_K1_KPline
             and high >=_My_K1_KPline
 			and filled >0
 			and filled =filled[1]
 			and _My_K1_KPline <>0
-			;
+			;}
 ///空平倉
 //k0停利
-cond[26] =low <=_My_K0_KPline
+{cond[26] =low <=_My_K0_KPline
 			and filledAvgPrice >_My_K0_KPline
 			and filled <0
 			and filled <>filled[1]
 			and _My_K0_KPline <>0 
-			; 
+			; }
 
 //停損
-cond[27] =filledAvgPrice <_My_CL_STPline 
+{cond[27] =filledAvgPrice <_My_CL_STPline 
 			and close >_My_CL_STPline 
 			and filled <0
 			and _My_CL_STPline <>0
-			;
+			;}
 
 //單Kn極值停利
 {cond[28] =qcofK <_qc_shortEX2
@@ -80,12 +80,12 @@ cond[27] =filledAvgPrice <_My_CL_STPline
 			and filled =filled[1]
 			;}
 //K1停利點
-cond[29] =filledAvgPrice >_My_K1_KPline 
+{cond[29] =filledAvgPrice >_My_K1_KPline 
             and low <=_My_K1_KPline
 			and filled <0
 			and filled =filled[1]
 			and _My_K1_KPline <>0
-			;
+			;}
 		
 ////通用多空平倉
 //////帳跌幅停損
@@ -99,7 +99,7 @@ cond[31] =((qcofK <_qc_shortEX and filled >0)
 			and filled <>0 
 			;}
 ////
-variable: _night_clp(0);
+{variable: _night_clp(0);
 if time =084500
     and filled <>0 then //檢查夜盤是否留倉
 begin
@@ -111,7 +111,7 @@ else begin
 
 cond[32] =_night_clp <>0
 			and ((filled >0 and low <_night_clp) 
-					or (filled <0 and high >_night_clp));
+					or (filled <0 and high >_night_clp));}
 ////			
 {variable: _to_My_FOLIO_line(0);
 _to_My_FOLIO_line =iff(filled >0, 
@@ -127,14 +127,16 @@ cond[33] =((open >=_to_My_FOLIO_line
 			and _to_My_FOLIO_line <>0
 			)
 			;}
-variable: _folio_base(5);
-cond[33] ={(filled <>0)
+
+{variable: _folio_base(5);
+cond[34] ={(filled <>0)
 			and }(filled >0
 						and (high -filledAvgPrice) >_folio_base
 						and close <(open +high)*0.5) 
 					or (filled <0
 							and (low -filledAvgPrice) <_folio_base*-1
-							and close >(open +low)*0.5);
+							and close >(open +low)*0.5);}
+
 //////極值鈍化
 {cond[34] =((filled >0
 					and _extremes_Line_Upper[1] =_extremes_Line_Upper[2]
@@ -171,15 +173,15 @@ cond[35] =keep_folioBased(_qc_kp_long,
 					))
 			and filled =filled[1]
 			;}
-//停利_反向穿越前極值
-cond[37] =((filled >0
+//停損_反向穿越前極值
+{cond[37] =((filled >0
 					and low <low[1]
 					)
 				or (filled <0
 					and high <high[1]
 					))
 			and filled =filled[1]
-			;
+			;}
 //停利_越過極值通道後反轉固定倍數
 {variable: _rev_ratio(0);
 _rev_ratio =0.66; //以多方而言
@@ -197,10 +199,10 @@ cond[38] =((filled >0
 			and filled =filled[1]
 			;}
 /////
-cond[39] =(trading_rest("_PeriodREST_midnight")
+{cond[39] =(trading_rest("_PeriodREST_midnight")
 				or trading_rest("_Endpoint_dayTrading")
 				)
 			and _ENABLE_SectionEND_Clp
-			and filled <>0;
-cond[40] =_SUSPEND_STR
-			and filled <>0;
+			and filled <>0;}
+{cond[40] =_SUSPEND_STR
+			and filled <>0;}

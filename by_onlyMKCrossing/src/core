@@ -15,7 +15,7 @@ input: _qc_stdw(numericREF);
 //init
 array: _qc_array[](0);
 variable: _len(0);
-_len =intPortion(4.5*60/barInterval)*5; //for 1week
+_len =intPortion(4.5*60/barInterval)*5; //for 早盤K棒數1week
 array_SetMaxIndex(_qc_array, _len);
 
 //
@@ -26,6 +26,7 @@ variable: _avg_mkopd(0);
 
 if time =084500 then
 begin
+    //早盤1stK時歸零
     _myOPEND =open;
     _avg_count =0;
     _mkopd =0;
@@ -37,6 +38,7 @@ begin
 end;
 
 variable: _time_sec(FALSE);
+//策略使用之時段(早盤)
 _time_sec =time >084500
 			and time <150000;
 
@@ -117,26 +119,32 @@ begin
         //K標差漲幅>基本利數
         if _range_L >_folio_base then
         begin
+            //多穿越型
             _switch_L =_marketPrice_avg_addone_RAW -open <_range_L 
                         and _LS_ratio >0
                         and open <_marketPrice_avg_addone_RAW
                         and high >=_marketPrice_avg_addone_RAW;
+            //多急漲型
             _switch_DL=high[1] -open <_range_L
                         and high[1] -open >0
                         and high >=high[1]
-                        and _avg_mkopd >0;
+                        and _avg_mkopd >0
+                        and time[1] <>084500;
         end;
         //K標差跌幅>基本利數(以下因計算負數所以*-1並反寫)
         if _range_S <_folio_base*-1 then
         begin
+            //空穿越型
             _switch_S =_marketPrice_avg_addone_RAW -open >_range_S
                         and _LS_ratio <0
                         and open >_marketPrice_avg_addone_RAW 
                         and low <=_marketPrice_avg_addone_RAW;
+            //空急跌型
             _switch_DS=low[1] -open >_range_S
                         and low[1] -open <0
                         and low <=low[1]
-                        and _avg_mkopd <0;
+                        and _avg_mkopd <0
+                        and time[1] <>084500;
         end;
     end else
     begin
@@ -145,57 +153,76 @@ begin
         if _range_L >_folio_base 
             and _LS_mk_ratio >0 then
         begin
+            //多穿越型
             _switch_mk_L =_marketPrice_avg_addone_RAW -open <_range_L
                                 and open <_marketPrice_avg_addone_RAW 
                                 and high >=_marketPrice_avg_addone_RAW;
-
+            //多急漲型
             _switch_opd_L =high[1] -open <_range_L
                                 and open <high[1]
                                 and high >=high[1]
-                            and _avg_mkopd >0;
+                            and _avg_mkopd >0
+                            and time[1] <>084500;
         end;
         //K標差跌幅>基本利數(以下因計算負數所以*-1並反寫)
         if _range_S <_folio_base*-1 
             and _LS_mk_ratio <0 then
         begin
+            //空穿越型
             _switch_mk_S =_marketPrice_avg_addone_RAW -open >_range_S*-1  
                             and open >_marketPrice_avg_addone_RAW
                             and low <=_marketPrice_avg_addone_RAW;
-
-            _switch_opd_S =_myOPEND -open >_range_S*-1
-                            and open >_myOPEND
-                            and low <=_myOPEND
-                            and _avg_mkopd <0;
+            //空急跌型
+            _switch_opd_S =low[1] -open >_range_S*-1
+                                and open >low[1]
+                                and low <=low[1]
+                            and _avg_mkopd <0
+                            and time[1] <>084500;
         end;
     end;
 
+    //當位於策略生效時段
 	if _time_sec then
 	begin
+
+        //雙MK重合
+        ////穿越型
 		if _switch_L
 			or _switch_S then
 		begin
 			_folio_POS_Line =p_n(_LS_ratio) *_marketPrice_avg_addone_RAW;
 		end else
+        ////急漲跌型
         if _switch_DL
             or _switch_DS then
         begin
             _folio_POS_Line =iff(_switch_DL, high[1], low[1]) *iff(_switch_DL, 1,-1);
         end else
+
+        //雙MK分開
+        ////穿越型
         if _switch_mk_L
             or _switch_mk_S then
         begin
             _folio_POS_Line =p_n(_LS_mk_ratio) *_marketPrice_avg_addone_RAW;
         end else 
+        ////急漲跌型
         if _switch_opd_L
             or _switch_opd_S then
         begin
             _folio_POS_Line =iff(_switch_opd_L, high[1], low[1]) *iff(_switch_opd_L, 1,-1);
         end;
 
-		_folio_POS_LineCLP =iff(_folio_POS_Line >0, maxlist(_range_L, _folio_base), 
-												minlist(_range_S, _folio_base*-1)) 
+        //產生出場線_folio_POS_LineCLP
+        ////當沖型保本法
+		_folio_POS_LineCLP =absValue(iff(_folio_POS_Line >0, 
+                                        maxlist(_range_L, _folio_base), 
+									    minlist(_range_S, _folio_base*-1)))
+                                    *p_n(_folio_POS_Line) 
 							+absValue(_folio_POS_Line);
 
+        //產生停損線_folio_POS_LineSTP
+        ////如產生新的進場線
 		if _folio_POS_Line <>_folio_POS_Line[1] then 
 			_folio_POS_LineSTP =iff(_folio_POS_Line >0, low[1], high[1]);
 	end;

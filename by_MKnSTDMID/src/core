@@ -45,34 +45,41 @@ variable: _INNER_CROSSING(1); //內穿越
 variable: _OUTTER_CROSSING(2); //外穿越
 
 //
-_LS_ratio =_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW;
+_LS_ratio =_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW; //趨勢向量
 
+//內穿越法
+//以內穿_marketPrice_avg_addone_RAW為啟動點
+//趨勢反轉期
 _switch_L =open <_marketPrice_avg_addone_RAW
-			and high >_marketPrice_avg_addone_RAW
-			and _LS_ratio >0
-			and (_str_switch =0 or _str_switch=1);
+			and high >_marketPrice_avg_addone_RAW //多方穿越_marketPrice_avg_addone_RAW
+			and _LS_ratio >0 //趨勢多
+			and (_str_switch =0 or _str_switch=1);//模式為全或內穿越
 _switch_S =open >_marketPrice_avg_addone_RAW
-			and low <_marketPrice_avg_addone_RAW
-			and _LS_ratio <0
-			and (_str_switch =0 or _str_switch=1);
-_switch_TL =open <_marketPrice_avg_RAW
-			and high >_marketPrice_avg_RAW
-			and _LS_ratio >0
-			and (_str_switch =0 or _str_switch=2);
-_switch_TS =open >_marketPrice_avg_RAW
-			and low <_marketPrice_avg_RAW
-			and _LS_ratio <0
-			and (_str_switch =0 or _str_switch=2);
+			and low <_marketPrice_avg_addone_RAW //空方穿越
+			and _LS_ratio <0 //趨勢空
+			and (_str_switch =0 or _str_switch=1);//模式為全或內穿越
 
-//for lineCRP
+//外穿越法
+//遠離_marketPrice_avg_addone_RAW並外穿_marketPrice_avg_RAW為啟動點
+//趨勢形成期
+_switch_TL =open <_marketPrice_avg_RAW
+			and high >_marketPrice_avg_RAW //多方穿越_marketPrice_avg_RAW
+			and _LS_ratio >0 //趨勢多
+			and (_str_switch =0 or _str_switch=2); //模式為全或外穿越
+_switch_TS =open >_marketPrice_avg_RAW
+			and low <_marketPrice_avg_RAW //空方穿越_marketPrice_avg_RAW
+			and _LS_ratio <0 //趨勢空
+			and (_str_switch =0 or _str_switch=2); //模式為全或外穿越
+
+//for lineCRP 產生進場線
 if _time_check then
 begin
 	if _switch_L
 		or _switch_S then
 	begin
-
+        //標示為形成內穿越
 		_switch_curr =_INNER_CROSSING;
-
+        //產生進場線
 		_folio_POS_Line =p_n(_LS_ratio) *iff(_LS_ratio >0,
 												maxlist2(_marketPrice_avg_addone_RAW,
 														_marketPrice_avg_addone_RAW[1],
@@ -87,9 +94,9 @@ begin
 	if _switch_TL
 		or _switch_TS then
 	begin
-
+        //標示為形成外穿越
 		_switch_curr =_OUTTER_CROSSING;
-
+        //產生進場線
 		_folio_POS_Line =p_n(_LS_ratio) *iff(_LS_ratio >0,
 												maxlist2(_marketPrice_avg_RAW,
 														_marketPrice_avg_RAW[1],
@@ -100,7 +107,7 @@ begin
 											);
 	end;
 
-	//for lineCLP & lineFOLIO
+	//for lineCLP & lineFOLIO 產生出場線及獲利基準線
 	if (_switch_curr =_INNER_CROSSING 
 			or _switch_curr =_OUTTER_CROSSING) then
 	begin
@@ -114,16 +121,13 @@ begin
 		end
 		else
 			_folio_POS_LineCLP =_stdMID +p_n(_folio_POS_Line)*_stdW*_stdevUNSTAT;
-{		_folio_POS_LineCLP  =iff(_switch_curr =_INNER_CROSSING, 
-									_marketPrice_avg_RAW,
-									_stdMID +p_n(_folio_POS_Line)*_stdW*_stdevUNSTAT); }
 
 		_folio_POS_LineFOLIO=iff(_switch_curr =_INNER_CROSSING,
 									_marketPrice_avg_addone_RAW,
 									_marketPrice_avg_RAW);
 	end;
 
-	//for lineRE
+	//for lineRE 產生平進循環線
 	if _folio_POS_Line =_folio_POS_Line[1] 
 		and _folio_POS_Line[1] =_folio_POS_Line[2]then
 	begin
@@ -146,7 +150,7 @@ begin
 			end;
 	end;
 
-	//for lineSTP
+	//for lineSTP 產生停損線
 	if _folio_POS_Line <>_folio_POS_Line[1] then 
 		_folio_POS_LineSTP =(iff(_folio_POS_Line >0, low[1], high[1]) 
 									+absValue(_folio_POS_Line))*0.5;
@@ -155,19 +159,30 @@ end;
 
 //for crp extra
 //for clp
-{variable: _night_clp(0);
+{
+//預設"夜留倉日平"通用函數
+//night_pos_clp
+
+//input:
+// 
+variable: _night_clp(0);
+variable: _night_pos_price(0);
 
 if time =084500
-    and filled <>0 then //檢查夜盤是否留倉
+    and filled <>0 then //早盤1stK時檢查夜盤是否留倉並設定檢查線
 begin
     _night_clp =(high[1] +low[1])*0.5;    
+    _night_pos_price =filledAverage;
 end
 else begin
         _night_clp =0;
+        _night_pos_price =0;
     end;
 
-cond =_night_pos <>0
-        and ((filled >0 and close <_night_clp) 
-                or (filled <0 and close >_night_clp));}
+night_pos_clp =_night_clp <>0
+                and filledAverage =_night_pos_price
+                and ((filled >0 and close <_night_clp) 
+                        or (filled <0 and close >_night_clp));
+}
 
 

@@ -1,4 +1,3 @@
-0443796996
 //
 //[0-1_參數設定區 ]
 input: _stdevSTAT(0.675, "定態區標差倍數");
@@ -17,7 +16,12 @@ input: _ENABLE_SectionEND_Clp(TRUE, "啟動時段結束平倉模式");
 input: _ENABLE_DEBUG(FALSE, "除錯模式");
 input: _ENABLE_LOGGER(TRUE, "啟動紀錄");
 
-settotalBar(760);
+//讀取K棒數
+//建議最小值為程式使用最大週期K棒數1.5~2倍
+//(5天30分K棒數=19*5=95)*1.5 =142 , *2=190
+//settotalBar(760);
+settotalBar(200);
+
 //[0-0_基本常數]
 variable: _clp_ratio(0.33); //以多方為基準
 variable: _shift_price(0); //滑價點數
@@ -287,10 +291,13 @@ then raiseRunTimeError(baseInfo("CrPRICE_IS_MISSING"));
 
 //3-3_產生多空進出場訊號.
 array: cond[40](FALSE);
-array_toolkit_tf("_RESET",cond); 		//重置預設條件陣列變數預設值FALSE
-
 array: cond_extra[40](FALSE);
-array_toolkit_tf("_RESET",cond_extra);  //重置啟用條件變數預設值FALSE
+array: cond_default[40](FALSE);
+
+array_toolkit_tf("_RESET",cond); 		    //重置預設條件陣列變數預設值FALSE
+array_toolkit_tf("_RESET",cond_extra);      //重置啟用條件變數預設值FALSE
+array_toolkit_tf("_RESET", cond_default);   //重置預設條件變數預設值FALSE
+
 //
 variable: _PRICE_PreCHECK(FALSE); //價位區間檢查
 variable: _IF_CrpLONG(FALSE); //做多判斷
@@ -367,12 +374,27 @@ begin
 			_stdMID
 
 	);
+
+    cond_clp_default(
+            cond_default,
+
+            _My_CR_line,
+            _My_K0_KPline,
+            _My_CL_STPline,
+            _My_K1_KPline,
+            _My_FOLIO_line,
+
+            _SUSPEND_STR
+
+    );
+
 end;
 
 //整合產生建平倉訊號
 _IF_CrpLONG  =condi_check(cond, 11, 15, "OR"); 
 _IF_CrpSHORT =condi_check(cond, 16, 19, "OR");
-_IF_Clp      =condi_check(cond, 21, 40, "OR");
+_IF_Clp      =condi_check(cond, 21, 40, "OR")
+                or condi_check(cond_default, 21, 40, "OR");
 
 //[5_下單前檢查]
 //[5-1_檢查滑價]
@@ -424,7 +446,10 @@ end;
 
 //檢查建倉K棒
 variable: _filter_INFO("");
+variable: _filter_default_INFO("");
+
 _filter_INFO =condi2string(cond);
+_filter_default_INFO =condi2string(cond_default);
 
 if filled <>0 
 	and filledAvgPrice <>filledAvgPrice[1] then 
@@ -434,7 +459,7 @@ begin
 end;
 
 //logger.
-if cond[39] then _return_info[3] =_suspend_msg
+if cond_default[40] then _return_info[3] =_suspend_msg
 else if _ENABLE_DEBUG then _return_info[3] ="除錯模式";
 
 if _ENABLE_LOGGER then
@@ -476,6 +501,7 @@ logger_multi("",
 		
 		_return_filter, ",",
 		_filter_INFO, ",", //about cond
+        _filter_default_INFO, ",",
 		
 		_return_info[1], ",",
 		_return_info[2], ",",
