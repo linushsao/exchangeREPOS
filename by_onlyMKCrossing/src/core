@@ -9,8 +9,9 @@ input: _marketPrice_avg_addone_RAW(numericseries);  //line for CRP
 input: _folio_POS_Line(numericREF);     //line for CRP
 input: _folio_POS_LineCLP(numericREF);  //line for CLP
 input: _folio_POS_LineSTP(numericREF);  //line for STP
-input: _qc_avg(numericREF);
-input: _qc_stdw(numericREF);
+//input: _qc_avg(numericREF);
+//input: _qc_stdw(numericREF);
+input: _LIB_DEBUG(stringREF);
 
 //init
 array: _qc_array[](0);
@@ -37,6 +38,15 @@ begin
     _avg_mkopd =_mkopd /_avg_count;
 end;
 
+//DebugInfo collect
+_LIB_DEBUG =text(_LIB_DEBUG, ",",
+
+        _myOPEND, ",",
+        _avg_count, ",",
+        _mkopd, ",",
+        _avg_mkopd
+    );
+
 variable: _time_sec(FALSE);
 //策略使用之時段(早盤)
 _time_sec =time >084500
@@ -44,6 +54,7 @@ _time_sec =time >084500
 
 //data collection
 variable: _qc_diff(0);
+variable: _qc_push_count(0);
 
 if currentbar >1 
     and _time_sec then
@@ -53,7 +64,18 @@ begin
                     high[1] -open[1],
                     low[1]  -open[1]);
     reflash_Data("_Push_", _qc_array, _qc_diff);
+
+    if _qc_push_count <_len then _qc_push_count +=1;
 end;
+
+//DebugInfo collect
+_LIB_DEBUG =text(_LIB_DEBUG, ",",
+
+        _len, ",",
+        _qc_push_count, ",",
+        _qc_array[_len], ",",
+        _qc_array[1]
+    );
 
 //count stdev
 variable: _qc_sum(0);
@@ -78,7 +100,7 @@ _qc_sum      =0;
 _qc_diffq_sum=0;
 
 ///計算標準差
-if _qc_array[1] <>0 then //完成採樣數
+if _qc_push_count >=_len then //完成採樣數
 begin
     
     for value1 =1 to _len
@@ -103,6 +125,17 @@ begin
     _range_L =_qc_avg +_qc_stdw*_stdevSTAT;
     _range_S =_qc_avg -_qc_stdw*_stdevSTAT;
 
+    //DebugInfo collect
+    _LIB_DEBUG =text(_LIB_DEBUG, ",",
+
+        _qc_avg, ",",
+        _qc_stdw, ",",
+        _LS_ratio, ",",
+        _LS_mk_ratio, ",",
+        _range_L, ",",
+        _range_S
+    );
+ 
     //
     _switch_L       =FALSE;
     _switch_S       =FALSE;
@@ -230,5 +263,17 @@ begin
 end;
 
 
+//DebugInfo collect
+_LIB_DEBUG =text(_LIB_DEBUG, ",",
 
+    _switch_L       , ",",
+    _switch_S       , ",",
+    _switch_DL      , ",",
+    _switch_DS      , ",",
+    _switch_mk_L    , ",",
+    _switch_mk_S    , ",",
+    _switch_opd_L   , ",",
+    _switch_opd_L   
+
+    ); 
 
