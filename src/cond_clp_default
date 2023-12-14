@@ -9,7 +9,7 @@ input: _My_K1_KPline(numericSeries);
 input: _My_FOLIO_line(numericSeries);
 
 input: _SUSPEND_STR(trueFalsesimple);
-
+input: _ENABLE_SectionEND_Clp(trueFalsesimple);
 //系統設定
 
 //平倉條件
@@ -106,3 +106,4 @@ cond[39] =(trading_rest("_PeriodREST_midnight")
 			and filled <>0;
 cond[40] =_SUSPEND_STR
 			and filled <>0;
+
