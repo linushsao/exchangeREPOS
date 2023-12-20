@@ -18,11 +18,12 @@ input: _ENABLE_LOGGER(TRUE, "啟動紀錄");
 
 //讀取K棒數
 //建議最小值為程式使用最大週期K棒數1.5~2倍
-//(5天30分K棒數=19*5=95)*1.5 =142 , *2=190
+//(5天30分K棒數=38*5=190)*1.5 =285 , *2=380
 //settotalBar(760);
-settotalBar(200);
+settotalBar(285);
 
 //[0-0_基本常數]
+variable: _DEBUG_INFO("");
 variable: _clp_ratio(0.33); //以多方為基準
 variable: _shift_price(0); //滑價點數
 
@@ -219,18 +220,22 @@ variable: _mkcqc_avg(0);
 variable: _mkcqc_stdw(0);
 
 by_onlyMKCrossing(
- _stdevSTAT,
- _stdevUNSTAT,
- _stdevUUNSTAT,
+		_stdevSTAT,
+		_stdevUNSTAT,
+		_stdevUUNSTAT,
 
- _marketPrice_avg_RAW,          //line for trend
- _marketPrice_avg_addone_RAW,   //line for CRP
+		_marketPrice_avg_RAW,          //line for trend
+		_marketPrice_avg_addone_RAW,   //line for CRP
 
- _folio_POS_Line, //line for CRP
- _folio_POS_LineCLP, //line for CLP
- _folio_POS_LineSTP, //line for STP
- _mkcqc_avg,
- _mkcqc_stdw
+		_folio_POS_Line, //line for CRP
+		_folio_POS_LineCLP, //line for CLP
+		_folio_POS_LineSTP, //line for STP
+		
+		_mkcqc_avg,
+		_mkcqc_stdw,
+
+		_DEBUG_INFO
+
 
 );
 
@@ -262,6 +267,9 @@ _My_K0_KPline   =_My_K1_KPline;
 _My_CL_STPline	=absValue(_folio_POS_LineSTP);	
 
 //3-2_分析是否平穩
+variable: _new_weekOfMonth(FALSE);
+_new_weekOfMonth =weekOfMonth(date) <>weekOfMonth(date)[1];
+
 variable: _My_folio_BySTR(0);
 rateOfPRICECumsum(
 		_ret_*p_N(_My_CR_line_RAW[1]),
@@ -271,14 +279,18 @@ rateOfPRICECumsum(
 
 variable: _export_My_folio_BySTR(0);
 variable: _export_folio_ByBand(0);
-folio_handler(
-
+by_folioANALYZE(
+	_new_weekOfMonth,
 	_My_folio_BySTR,
+
+	_export_My_folio_BySTR
+);
+
+by_folioANALYZE(
+	_new_weekOfMonth,
 	_folio_ByBand,
 
-	_export_My_folio_BySTR,
 	_export_folio_ByBand
-
 );
 
 variable: _folio_diff(0);
@@ -384,7 +396,8 @@ begin
             _My_K1_KPline,
             _My_FOLIO_line,
 
-            _SUSPEND_STR
+            _SUSPEND_STR{,
+			_ENABLE_SectionEND_Clp}
 
     );
 
@@ -469,6 +482,8 @@ logger_multi("",
 		_LaunchTIME, ",", //_LaunchTIME
 		_LaunchBAR, ",",
 
+		_mkcqc_avg, ",",
+		_mkcqc_stdw, ",",
 		_folio_POS_Line, ",",
 
 		_shift_price, ",",
@@ -514,3 +529,4 @@ logger_multi("",
 if _SUSPEND_STR
 	and filled =0
 then raiseRunTimeError(_suspend_msg);
+

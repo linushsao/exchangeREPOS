@@ -1,0 +1,40 @@
+//
+input: cond[_len](trueFalseArrayRef);
+input: cond_mark[_len1](trueFalsearray);
+
+input: _My_CR_line_RAW(numericSeries);
+input: _reflash_price(numericSeries);
+input: _folio_diff(numericSeries);
+input: _folio_BySTR(numericSeries);
+input: _LS_ratio(numericSeries);
+
+//
+variable: _stdev_folio_BySTR(0);
+_stdev_folio_BySTR 	=stdevBand_gen(_folio_BySTR, getsTDEV_MID);
+//
+cond[1] =NOT trading_rest("_OP_morning")
+			and cond_mark[1];
+cond[2] =p_N(_LS_ratio) *p_N(_My_CR_line_RAW) >0
+			and cond_mark[2];
+cond[3] =(filled =0)
+			and cond_mark[3];
+cond[4] =_My_CR_line_RAW <>_reflash_price
+			and cond_mark[4];
+{cond[5] =_folio_diff =_folio_diff[1];}
+{cond[6] =_folio_BySTR >=_folio_BySTR[1];}
+{cond[6] =_stdev_folio_BySTR >0
+			or _stdev_folio_BySTR >_stdev_folio_BySTR[1];}
+cond[6] =(_folio_BySTR >0
+				or _folio_BySTR >_folio_BySTR[1])
+			and cond_mark[6];
+//
+value2 =0;
+value3 =0;
+
+for value1 =1 to _len
+begin
+	if cond[value1] 	 then value2 =value2+1;
+	if cond_mark[value1] then value3 =value3+1;
+end;
+
+Cr_preCHECK_enlightment =nuMtoTF(iff(value2 =value3, 1, -1));

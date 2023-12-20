@@ -1,234 +1,532 @@
 //
-input: _stdevSTAT(numericSimple);
-input: _stdevUNSTAT(numericSimple);
-input: _stdevUUNSTAT(numericSimple);
+//[0-1_參數設定區 ]
+input: _stdevSTAT(0.675, "定態區標差倍數");
+input: _stdevUNSTAT(1.645, "躍遷區標差倍數");
+input: _stdevUUNSTAT(1.959, "極值區標差倍數(預設2)");
+input: _qcLine_ratioT(1.959, "_qcLine標差倍數");
+input: _mkavgline(1, "趨勢(0)日(1)周(2)月 均線");
+input: _mkavgline_addone(0, "建平倉(0)日(1)周(2)月 均線");
+input: _ratioU(0.66,"前K回檔比例(多:0.66)");
+input: _ratioD(0.33,"前K回檔比例(空:0.33)");
+input: _e_path_period(4, "區間極值期數");
+input: _time_CrP(0, "建倉時段(0_無/1_台指日盤/2_台指夜盤美前/3_台指夜盤美股)，負數表除外");
+{input: _ENABLE_MorningClose(TRUE, "檢查早開盤K平倉");}
+{input: _ENABLE_keepFolio(TRUE, "啟動保本模式");}
+input: _ENABLE_SectionEND_Clp(TRUE, "啟動時段結束平倉模式");
+input: _ENABLE_DEBUG(FALSE, "除錯模式");
+input: _ENABLE_LOGGER(TRUE, "啟動紀錄");
 
-input: _marketPrice_avg_RAW(numericseries);         //line for trend
-input: _marketPrice_avg_addone_RAW(numericseries);  //line for CRP
+//讀取K棒數
+//建議最小值為程式使用最大週期K棒數1.5~2倍
+//(5天30分K棒數=38*5=190)*1.5 =285 , *2=380
+//settotalBar(760);
+settotalBar(285);
 
-input: _folio_POS_Line(numericREF);     //line for CRP
-input: _folio_POS_LineCLP(numericREF);  //line for CLP
-input: _folio_POS_LineSTP(numericREF);  //line for STP
-input: _qc_avg(numericREF);
-input: _qc_stdw(numericREF);
+//[0-0_基本常數]
+variable: _DEBUG_INFO("");
+variable: _clp_ratio(0.33); //以多方為基準
+variable: _shift_price(0); //滑價點數
 
-//init
-array: _qc_array[](0);
-variable: _len(0);
-_len =intPortion(4.5*60/barInterval)*5; //for 早盤K棒數1week
-array_SetMaxIndex(_qc_array, _len);
+_shift_price =get_contractSHIFT;
+//[0-2_基本檢查與設定]
+if DayIfMarketClose 
+	and (NOT _ENABLE_DEBUG)then 
+begin
+	variable: _infoString("");
+	_infoString =text("[DayIfMarketClose]", BaseInfo("NoTrading_on_Sunday"));
+	
+	logger_multi("",
+		text(
+				_infoString
+			)
+		);
+	
+	raiseRunTimeError(_infoString);
+end;
 
 //
-variable: _myOPEND(0);
-variable: _avg_count(0);
-variable: _mkopd(0);
-variable: _avg_mkopd(0);
+variable: _LaunchDATE(0);
+variable: _LaunchTIME(0);
+variable: _LaunchBAR(0);
+if _LaunchDATE =0
+then 
+begin
+	_LaunchDATE =currentDate;
+	_LaunchTIME =currentTime;
+	_LaunchBAR =currentBar;
+end;
+//
+array: _return_info[5]("");
+array_toolkit_str("空白訊息",_return_info);
 
-if time =084500 then
+//[1-1_產生基本分析資料].
+variable: _params("");
+variable: _marketPrice_avg_RAW(0);
+variable: _marketPrice_avg_addone_RAW(0);
+switch(_mkavgline)
 begin
-    //早盤1stK時歸零
-    _myOPEND =open;
-    _avg_count =0;
-    _mkopd =0;
-end else
-begin
-    _avg_count =_avg_count +1;
-    _mkopd =_mkopd +(_marketPrice_avg_addone_RAW -_myOPEND);
-    _avg_mkopd =_mkopd /_avg_count;
+	case 0:	_params ="DAILY";
+	case 1:	_params ="WEEKILY";
+	case 2:	_params ="MONTHILY";
 end;
 
-variable: _time_sec(FALSE);
-//策略使用之時段(早盤)
-_time_sec =time >084500
-			and time <150000;
+_marketPrice_avg_RAW =_marketPrice_avg(_params);
 
-//data collection
+switch(_mkavgline_addone)
+begin
+	case 0:	_params ="DAILY";
+	case 1:	_params ="WEEKILY";
+	case 2:	_params ="MONTHILY";
+end;
+
+_marketPrice_avg_addone_RAW =_marketPrice_avg(_params);
+
+//
+variables: _extremes_Line_Upper(0);
+variables: _extremes_Line_Mid(0);
+variables: _extremes_Line_lower(0);
+e_path(
+	_e_path_period,
+	_extremes_Line_Upper,
+	_extremes_Line_Mid,
+	_extremes_Line_lower
+);
+//
+variable: _stdMID(0);
+variable: _stdW(0);
+variable: _U_STAT(0);
+variable: _D_STAT(0);
+variable: _U2_STAT(0);
+variable: _D2_STAT(0);
+variable: _U3_STAT(0);
+variable: _D3_STAT(0);
+variable: _U_U3UNSTAT(0);
+variable: _D_U3UNSTAT(0);
+
+createBySTDEV(
+	getSTDEV_MID,
+	_stdMID,
+	_stdW
+);
+
+_U_STAT =_stdMID + _stdW*_stdevSTAT;
+_D_STAT =_stdMID - _stdW*_stdevSTAT;
+_U2_STAT =_stdMID + _stdW*_stdevUNSTAT;
+_D2_STAT =_stdMID - _stdW*_stdevUNSTAT;
+_U3_STAT =_stdMID + _stdW*_stdevUUNSTAT;
+_D3_STAT =_stdMID - _stdW*_stdevUUNSTAT;
+//
+variable: _qc_avg(0);
+variable: _qc_stdev(0);
+variable: _qc_bband(0);
 variable: _qc_diff(0);
 
-if currentbar >1 
-    and _time_sec then
+if currentBar >getSTDEV_MID
+then
 begin
-    //save diffvalue into arrayREF
-    _qc_diff =iff(close[1] -open[1] >0, 
-                    high[1] -open[1],
-                    low[1]  -open[1]);
-    reflash_Data("_Push_", _qc_array, _qc_diff);
+	Stdev_gen(
+		getSTDEV_MID,
+		close,
+		open,
+		_qc_avg,
+		_qc_stdev,
+		_qc_bband,
+		_qc_diff
+	);
 end;
+//
+variable: _qc_long(0);
+variable: _qc_short(0);
+variable: _qc_longEX(0);
+variable: _qc_shortEX(0);
+variable: _qc_longEX2(0);
+variable: _qc_shortEX2(0);
+variable: stopLOSS_volumn(0);
+variable: stopLOSS_folio(0);
+variable: _folio_curr(0);
+_qc_long =_qc_avg +_qc_stdev*_stdevSTAT;
+_qc_short =_qc_avg -_qc_stdev*_stdevSTAT;
+_qc_longEX =_qc_avg +_qc_stdev*_stdevUNSTAT;
+_qc_shortEX =_qc_avg -_qc_stdev*_stdevUNSTAT;
+_qc_longEX2 =_qc_avg +_qc_stdev*_stdevUUNSTAT;
+_qc_shortEX2 =_qc_avg -_qc_stdev*_stdevUUNSTAT;
+//
+variable: _qc_line_long(0);
+variable: _qc_line_short(0);
+_qc_line_long =_qc_avg +_qc_stdev*_qcLine_ratioT;
+_qc_line_short =_qc_avg -_qc_stdev*_qcLine_ratioT;
+//
+variable: _qc_line(0);
+variable: _qc_line_L(0);
+variable: _qc_line_S(0);
+_qc_line_L =open + _qc_line_long;
+_qc_line_S =open + _qc_line_short;
+//
+variable: _vol_bband(0);
+_vol_bband =stdevBand_gen(volume, getSTDEV_MID);
+variable: _priceRATIO_U(0);
+variable: _priceRATIO_D(0);
+_priceRATIO_U =priceOC_byRATIO(_ratioU);
+_priceRATIO_D =priceOC_byRATIO(_ratioD);
+//
+variable: _folio_NATU(0);
+variable: _folio_NATU_StdBand(0);
+variable: _folio_ByBand(0);
+variable: _folio_ByBand_StdBand(0);
 
-//count stdev
-variable: _qc_sum(0);
-variable: _qc_diffq_sum(0);
-variable: _range_L(0);
-variable: _range_S(0);
-variable: _folio_base(5);
+folio_stdevT2_core(
+	_folio_NATU,
+	_folio_NATU_StdBand,
+	_folio_ByBand,
+	_folio_ByBand_StdBand
+);	
+
+//[1-2_檢查是否盤中非歷史資較]
+variable: _onREALTime(FALSE);
+_onREALTime =IF_RealTime(
+					_LaunchDATE,
+					_LaunchTIME,
+					_LaunchBAR
+			);
+
+//[1-3_檢查是緊急停止]
+variable: _suspend_msg("");
+variable: _suspend_dbg("");
+variable: intraBarPersist _SUSPEND_STR(FALSE);
+suspend_str(
+
+	 _LaunchDATE,
+	 _LaunchTIME,
+	 _LaunchBAR,
+	 _qc_longEX,
+	 _qc_shortEX,
+
+	 stopLOSS_folio,
+	 _folio_curr,
+	 _SUSPEND_STR,
+	 _suspend_msg,
+
+	 _suspend_dbg
+
+);
+	
+//[2-1_套用策略函數] >>產生多空進場線.
+//CORE for CRP
+variable: _folio_POS_Line(0);
+variable: _folio_POS_LineRE(0);
+variable: _folio_POS_LineCLP(0);
+variable: _folio_POS_LineSTP(0);
+variable: _mkcqc_avg(0);
+variable: _mkcqc_stdw(0);
+
+by_onlyMKCrossing(
+		_stdevSTAT,
+		_stdevUNSTAT,
+		_stdevUUNSTAT,
+
+		_marketPrice_avg_RAW,          //line for trend
+		_marketPrice_avg_addone_RAW,   //line for CRP
+
+		_folio_POS_Line, //line for CRP
+		_folio_POS_LineCLP, //line for CLP
+		_folio_POS_LineSTP, //line for STP
+		
+		_mkcqc_avg,
+		_mkcqc_stdw,
+
+		_DEBUG_INFO
+
+
+);
+
+//<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+//[3_依進場線產生多空進出場訊號]
+//3-1_交易參數登錄
+variable: _My_FOLIO_line(0);
+variable: _My_CR_line(0);
+variable: _My_CR_line_RAW(0);
+variable: _My_RE_line(0);
+variable: _My_K1_KPline(0);
+variable: _My_K0_KPline(0);
+variable: _My_CL_STPline(0);
+
+//登錄獲利參考線
+_My_FOLIO_line 	=_marketPrice_avg_RAW;
+//登錄進場線
+_My_CR_line     =absValue(_folio_POS_Line); 
+//登錄進場線(含多空訊號)	
+_My_CR_line_RAW =_folio_POS_Line; 
+//登錄平進循環線   			
+_My_RE_line 	=absValue(_folio_POS_LineRE);	
+//登錄K1停利點
+_My_K1_KPline	=absValue(_folio_POS_LineCLP);
+//登錄K0停利點
+{_My_K0_KPline   =iff(_My_CR_line_RAW >0, _qc_line_L, _qc_line_S);}
+_My_K0_KPline   =_My_K1_KPline;
+//登錄停損點
+_My_CL_STPline	=absValue(_folio_POS_LineSTP);	
+
+//3-2_分析是否平穩
+variable: _new_weekOfMonth(FALSE);
+_new_weekOfMonth =weekOfMonth(date) <>weekOfMonth(date)[1];
+
+variable: _My_folio_BySTR(0);
+rateOfPRICECumsum(
+		_ret_*p_N(_My_CR_line_RAW[1]),
+		_My_folio_BySTR,
+		"ADD"
+);
+
+variable: _export_My_folio_BySTR(0);
+variable: _export_folio_ByBand(0);
+by_folioANALYZE(
+	_new_weekOfMonth,
+	_My_folio_BySTR,
+
+	_export_My_folio_BySTR
+);
+
+by_folioANALYZE(
+	_new_weekOfMonth,
+	_folio_ByBand,
+
+	_export_folio_ByBand
+);
+
+variable: _folio_diff(0);
+_folio_diff =_export_folio_ByBand -_export_My_folio_BySTR;
+
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+if _onREALTime and _My_CR_line =0
+then raiseRunTimeError(baseInfo("CrPRICE_IS_MISSING"));
+//>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+//3-3_產生多空進出場訊號.
+array: cond[40](FALSE);
+array: cond_extra[40](FALSE);
+array: cond_default[40](FALSE);
+
+array_toolkit_tf("_RESET",cond); 		    //重置預設條件陣列變數預設值FALSE
+array_toolkit_tf("_RESET",cond_extra);      //重置啟用條件變數預設值FALSE
+array_toolkit_tf("_RESET", cond_default);   //重置預設條件變數預設值FALSE
+
+//
+variable: _PRICE_PreCHECK(FALSE); //價位區間檢查
+variable: _IF_CrpLONG(FALSE); //做多判斷
+variable: _IF_CrpSHORT(FALSE); //做空判斷
+variable: _IF_Clp(FALSE); //平倉判斷
+variable: _return_filter("");
+//設定預設附加參數
+
+//建倉條件
+////於早盤084500時紀錄前日最後之進場點_reflash_price
+////本日進場點不能和_reflash_price重複
+variable: _reflash_price(0);
+if time =084500 
+then _reflash_price =_My_CR_line_RAW;
+
 variable: _LS_ratio(0);
-variable: _LS_mk_ratio(0);
-variable: _switch_L(FALSE);
-variable: _switch_S(FALSE);
-variable: _switch_DL(FALSE);
-variable: _switch_DS(FALSE);
-variable: _switch_mk_L(FALSE);
-variable: _switch_mk_S(FALSE);
-variable: _switch_opd_L(FALSE);
-variable: _switch_opd_S(FALSE);
-variable: intraBarPersist _time_CRP(0);
+_LS_ratio =_folio_NATU_StdBand;
 
-///init
-_qc_sum      =0;
-_qc_diffq_sum=0;
+//進入建倉區段前檢查盤勢
+variable: _My_Cr_preCHECK(FALSE);
 
-///計算標準差
-if _qc_array[1] <>0 then //完成採樣數
+cond_extra[1] =TRUE; //檢查條件1
+cond_extra[3] =TRUE; //檢查條件3
+
+_My_Cr_preCHECK =Cr_preCHECK_enlightment(
+									cond,
+									cond_extra,
+
+									_My_CR_line_RAW,
+									_reflash_price,
+									_folio_diff,
+									_My_folio_BySTR,
+									_LS_ratio
+
+									);
+
+//建倉條件
+cond_Crp_new(
+		 cond,
+
+		 _My_CR_line,
+		 _My_CR_line_RAW,
+		 _My_RE_line	
+
+);
+
+
+if filled <>0 then
 begin
-    
-    for value1 =1 to _len
-    begin
-        _qc_sum =_qc_sum +_qc_array[value1];
-    end;
+	//平倉條件
+	cond_Clp_cusMKC(
+			cond,
 
-    _qc_avg =_qc_sum /_len;
-    
-    for value1 =1 to _len
-    begin
-        _qc_diffq_sum =_qc_diffq_sum +square(_qc_array[value1] -_qc_avg);
-    end;
+			_My_CR_line,
+			_My_K0_KPline,
+			_My_CL_STPline,
+			_My_K1_KPline,
+			_qc_shortEX2,
+			_qc_longEX2,
+			_My_FOLIO_line,
+			_extremes_Line_Upper,
+			_extremes_Line_lower,
+			_qc_long,
+			_qc_short,
+			_qc_longEX,
+			_qc_shortEX,
 
-    _qc_stdw = squareRoot(_qc_diffq_sum/_len);
+			{_ENABLE_MorningClose,}
+			{_ENABLE_keepFolio,}
+			_ENABLE_SectionEND_Clp,
+			_SUSPEND_STR,
+			
+			{TRUE, //_ENABLE_LONG_PERIOD,}
+			_stdMID
 
-    //
-    _LS_ratio   =_marketPrice_avg_addone_RAW -open;
-    _LS_mk_ratio=_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW;
+	);
 
+    cond_clp_default(
+            cond_default,
 
-    _range_L =_qc_avg +_qc_stdw*_stdevSTAT;
-    _range_S =_qc_avg -_qc_stdw*_stdevSTAT;
+            _My_CR_line,
+            _My_K0_KPline,
+            _My_CL_STPline,
+            _My_K1_KPline,
+            _My_FOLIO_line,
 
-    //
-    _switch_L       =FALSE;
-    _switch_S       =FALSE;
-    _switch_DL      =FALSE;
-    _switch_DS      =FALSE;
-    _switch_mk_L    =FALSE;    
-    _switch_mk_S    =FALSE;
-    _switch_opd_L   =FALSE;
-    _switch_opd_L   =FALSE;
+            _SUSPEND_STR{,
+			_ENABLE_SectionEND_Clp}
 
-    //當雙MK線重合
-    if _marketPrice_avg_RAW =_marketPrice_avg_addone_RAW then
-    begin
-        //K標差漲幅>基本利數
-        if _range_L >_folio_base then
-        begin
-            //多穿越型
-            _switch_L =_marketPrice_avg_addone_RAW -open <_range_L 
-                        and _LS_ratio >0
-                        and open <_marketPrice_avg_addone_RAW
-                        and high >=_marketPrice_avg_addone_RAW;
-            //多急漲型
-            _switch_DL=high[1] -open <_range_L
-                        and high[1] -open >0
-                        and high >=high[1]
-                        and _avg_mkopd >0
-                        and time[1] <>084500;
-        end;
-        //K標差跌幅>基本利數(以下因計算負數所以*-1並反寫)
-        if _range_S <_folio_base*-1 then
-        begin
-            //空穿越型
-            _switch_S =_marketPrice_avg_addone_RAW -open >_range_S
-                        and _LS_ratio <0
-                        and open >_marketPrice_avg_addone_RAW 
-                        and low <=_marketPrice_avg_addone_RAW;
-            //空急跌型
-            _switch_DS=low[1] -open >_range_S
-                        and low[1] -open <0
-                        and low <=low[1]
-                        and _avg_mkopd <0
-                        and time[1] <>084500;
-        end;
-    end else
-    begin
-        //當雙MK線分開
-        //K標差漲幅>基本利數
-        if _range_L >_folio_base 
-            and _LS_mk_ratio >0 then
-        begin
-            //多穿越型
-            _switch_mk_L =_marketPrice_avg_addone_RAW -open <_range_L
-                                and open <_marketPrice_avg_addone_RAW 
-                                and high >=_marketPrice_avg_addone_RAW;
-            //多急漲型
-            _switch_opd_L =high[1] -open <_range_L
-                                and open <high[1]
-                                and high >=high[1]
-                            and _avg_mkopd >0
-                            and time[1] <>084500;
-        end;
-        //K標差跌幅>基本利數(以下因計算負數所以*-1並反寫)
-        if _range_S <_folio_base*-1 
-            and _LS_mk_ratio <0 then
-        begin
-            //空穿越型
-            _switch_mk_S =_marketPrice_avg_addone_RAW -open >_range_S*-1  
-                            and open >_marketPrice_avg_addone_RAW
-                            and low <=_marketPrice_avg_addone_RAW;
-            //空急跌型
-            _switch_opd_S =low[1] -open >_range_S*-1
-                                and open >low[1]
-                                and low <=low[1]
-                            and _avg_mkopd <0
-                            and time[1] <>084500;
-        end;
-    end;
-
-    //當位於策略生效時段
-	if _time_sec then
-	begin
-
-        //雙MK重合
-        ////穿越型
-		if _switch_L
-			or _switch_S then
-		begin
-			_folio_POS_Line =p_n(_LS_ratio) *_marketPrice_avg_addone_RAW;
-		end else
-        ////急漲跌型
-        if _switch_DL
-            or _switch_DS then
-        begin
-            _folio_POS_Line =iff(_switch_DL, high[1], low[1]) *iff(_switch_DL, 1,-1);
-        end else
-
-        //雙MK分開
-        ////穿越型
-        if _switch_mk_L
-            or _switch_mk_S then
-        begin
-            _folio_POS_Line =p_n(_LS_mk_ratio) *_marketPrice_avg_addone_RAW;
-        end else 
-        ////急漲跌型
-        if _switch_opd_L
-            or _switch_opd_S then
-        begin
-            _folio_POS_Line =iff(_switch_opd_L, high[1], low[1]) *iff(_switch_opd_L, 1,-1);
-        end;
-
-        //產生出場線_folio_POS_LineCLP
-        ////當沖型保本法
-		_folio_POS_LineCLP =absValue(iff(_folio_POS_Line >0, 
-                                        maxlist(_range_L, _folio_base), 
-									    minlist(_range_S, _folio_base*-1)))
-                                    *p_n(_folio_POS_Line) 
-							+absValue(_folio_POS_Line);
-
-        //產生停損線_folio_POS_LineSTP
-        ////如產生新的進場線
-		if _folio_POS_Line <>_folio_POS_Line[1] then 
-			_folio_POS_LineSTP =iff(_folio_POS_Line >0, low[1], high[1]);
-	end;
+    );
 
 end;
 
+//整合產生建平倉訊號
+_IF_CrpLONG  =condi_check(cond, 11, 15, "OR"); 
+_IF_CrpSHORT =condi_check(cond, 16, 19, "OR");
+_IF_Clp      =condi_check(cond, 21, 40, "OR")
+                or condi_check(cond_default, 21, 40, "OR");
+
+//[5_下單前檢查]
+//[5-1_檢查滑價]
+variable: _shift_price_check(FALSE);
+_shift_price_check =absValue(close -_My_CR_line) <=absValue(_shift_price)
+						or (absValue(close -_My_RE_line) <=absValue(_shift_price)
+								and _My_RE_line <>0)
+						or _shift_price =0;
+
+//[6_呼叫下單通用函式] >>執行建平倉	.	
+array: intraBarPersist _pos_timeL[5](0);
+array: intraBarPersist _pos_timeS[5](0);
+variable: _leng(0);
+_leng =array_GetMaxIndex(_pos_timeL);
+
+variable: _CHECK_Crp(FALSE);
+variable: _CHECK_Clp(FALSE);
+_CHECK_Crp =(_IF_CrpLONG
+					or _IF_CrpSHORT)
+			and _shift_price_check
+			and _My_Cr_preCHECK
+			and ((_IF_CrpLONG and _pos_timeL[_leng] <>time)
+					or (_IF_CrpSHORT and _pos_timeS[_leng] <>time)
+							)
+			;
+_CHECK_Clp =_IF_Clp;
+
+if (_onREALTime //盤中
+		and (_CHECK_Crp
+			or _CHECK_Clp))
+	or (NOT _onREALTime) //非盤中，回測策略
+then
+begin
+	position_MGR(
+
+		_IF_CrpLONG,
+		_IF_CrpSHORT,
+		_IF_Clp,
+
+		_time_CrP,
+		_LaunchDATE,
+		_LaunchTIME,
+		_LaunchBAR,
+
+		_return_filter,
+		_return_info
+	);
+end;
+
+//檢查建倉K棒
+variable: _filter_INFO("");
+variable: _filter_default_INFO("");
+
+_filter_INFO =condi2string(cond);
+_filter_default_INFO =condi2string(cond_default);
+
+if filled <>0 
+	and filledAvgPrice <>filledAvgPrice[1] then 
+begin
+	if filled >0 and _pos_timeL[_leng] <>time then reflash_Data("_Push_", _pos_timeL, time);
+	if filled <0 and _pos_timeS[_leng] <>time then reflash_Data("_Push_", _pos_timeS, time);
+end;
+
+//logger.
+if cond_default[40] then _return_info[3] =_suspend_msg
+else if _ENABLE_DEBUG then _return_info[3] ="除錯模式";
+
+if _ENABLE_LOGGER then
+logger_multi("",
+	text(
+		_LaunchDATE, ",", //_LaunchDATE
+		_LaunchTIME, ",", //_LaunchTIME
+		_LaunchBAR, ",",
+
+		_mkcqc_avg, ",",
+		_mkcqc_stdw, ",",
+		_folio_POS_Line, ",",
+
+		_shift_price, ",",
+		_LS_ratio, ",",
+		_My_CR_line, ",",
+		_My_CR_line_RAW, ",",
+		_reflash_price, ",",
+		_My_RE_line, ",",
+		_My_CL_STPline, ",",
+		_My_K1_KPline, ",",
+		_My_K0_KPline, ",",
+		position, ",",
+		filled, ",",
+		filled -position, ",",		
+		filledAvgPrice, ",",
+
+		_folio_curr, ",",
+		stopLOSS_folio, ",",
+		_folio_diff, ",",
+		_My_folio_BySTR, ",",
+
+		_CHECK_Crp, ",",
+		_CHECK_Clp, ",",
+		_IF_CrpLONG, ",",
+		_IF_CrpSHORT, ",",		
+		_IF_Clp, ",",
+		_onREALTime, ",",
+		_shift_price_check, ",",
+		_My_Cr_preCHECK, ",",
+		
+		_return_filter, ",",
+		_filter_INFO, ",", //about cond
+        _filter_default_INFO, ",",
+		
+		_return_info[1], ",",
+		_return_info[2], ",",
+		_return_info[3]
+		)
+	);
 
 
+
+if _SUSPEND_STR
+	and filled =0
+then raiseRunTimeError(_suspend_msg);
 

@@ -24,6 +24,7 @@ input: _SUSPEND_STR(trueFalsesimple);
 input: _stdMID(numericSeries);
 
 //系統設定
+variable: _folio_base(10);
 ////保本係數(由底點往上計算占全部比例)
 {variable: _ratioU(0); //多保本係數
 variable: _ratioD(0); //空保本係數
@@ -79,6 +80,15 @@ _ratioD =0.66;}
 			and filled <0
 			and filled =filled[1]
 			;}
+//單Kn當沖停利
+cond[28] =(filled >0
+					and (high -filledAvgPrice) >=_folio_base
+					and close <(open +high)*0.5) 
+				or (filled <0
+						and (low -filledAvgPrice) <=_folio_base*-1
+						and close >(open +low)*0.5)
+			and filled =filled[1]
+			;
 //K1停利點
 {cond[29] =filledAvgPrice >_My_K1_KPline 
             and low <=_My_K1_KPline
@@ -89,11 +99,12 @@ _ratioD =0.66;}
 		
 ////通用多空平倉
 //////帳跌幅停損
-cond[31] =((qcofK <_qc_shortEX and filled >0)
+{cond[31] =((qcofK <_qc_shortEX and filled >0)
 				or (qcofK >_qc_longEX and filled <0))
 			and filled =filled[1]
-			;
+			;}
 			
+		
 {cond[32] =_ENABLE_MorningClose
 			and time =084500
 			and filled <>0 
@@ -128,14 +139,13 @@ cond[33] =((open >=_to_My_FOLIO_line
 			)
 			;}
 
-{variable: _folio_base(5);
-cond[34] ={(filled <>0)
-			and }(filled >0
-						and (high -filledAvgPrice) >_folio_base
-						and close <(open +high)*0.5) 
-					or (filled <0
-							and (low -filledAvgPrice) <_folio_base*-1
-							and close >(open +low)*0.5);}
+{variable: _folio_base(5);}
+{cond[34] =(filled >0
+				and (high -filledAvgPrice) >_folio_base
+				and close <(open +high)*0.5) 
+			or (filled <0
+					and (low -filledAvgPrice) <_folio_base*-1
+					and close >(open +low)*0.5);}
 
 //////極值鈍化
 {cond[34] =((filled >0
@@ -199,10 +209,11 @@ cond[38] =((filled >0
 			and filled =filled[1]
 			;}
 /////
-{cond[39] =(trading_rest("_PeriodREST_midnight")
+cond[39] =(trading_rest("_PeriodREST_midnight")
 				or trading_rest("_Endpoint_dayTrading")
 				)
 			and _ENABLE_SectionEND_Clp
-			and filled <>0;}
+			and filled <>0;
 {cond[40] =_SUSPEND_STR
 			and filled <>0;}
+
