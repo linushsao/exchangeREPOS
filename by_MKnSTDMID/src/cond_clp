@@ -17,7 +17,7 @@ input: _qc_shortEX(numericSeries);
 
 {input: _ENABLE_MorningClose(trueFalsesimple);}
 {input: _ENABLE_keepFolio(trueFalsesimple);}
-{input: _ENABLE_SectionEND_Clp(trueFalsesimple);}
+input: _ENABLE_SectionEND_Clp(trueFalsesimple);
 input: _SUSPEND_STR(trueFalsesimple);
 
 {input: ENABLE_LONG_PERIOD(trueFalsesimple);}
@@ -197,3 +197,4 @@ cond[38] =((filled >0
 			and filled <>0;}
 {cond[40] =_SUSPEND_STR
 			and filled <>0;}
+

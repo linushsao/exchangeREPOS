@@ -26,7 +26,6 @@ settotalBar(285);
 variable: _DEBUG_INFO("");
 variable: _clp_ratio(0.33); //以多方為基準
 variable: _shift_price(0); //滑價點數
-variable: _LIB_DEBUG("");
 
 _shift_price =get_contractSHIFT;
 //[0-2_基本檢查與設定]
@@ -237,16 +236,6 @@ by_onlyMKCrossing(
 
 		_DEBUG_INFO
 
-<<<<<<< HEAD
-=======
- _folio_POS_Line, //line for CRP
- _folio_POS_LineCLP, //line for CLP
- _folio_POS_LineSTP, //line for STP
-
- //_mkcqc_avg,
- //_mkcqc_stdw
- _LIB_DEBUG
->>>>>>> dc0cf431fc5ac39f148aec61cb189b6f9ea68e00
 
 );
 
@@ -398,7 +387,6 @@ begin
 
 	);
 
-    //預設平倉條件
     cond_clp_default(
             cond_default,
 
@@ -488,7 +476,6 @@ if cond_default[40] then _return_info[3] =_suspend_msg
 else if _ENABLE_DEBUG then _return_info[3] ="除錯模式";
 
 if _ENABLE_LOGGER then
-begin
 logger_multi("",
 	text(
 		_LaunchDATE, ",", //_LaunchDATE
@@ -537,10 +524,7 @@ logger_multi("",
 		)
 	);
 
-logger_multi("SYS", _LIB_DEBUG);
 
-
-end;
 
 if _SUSPEND_STR
 	and filled =0

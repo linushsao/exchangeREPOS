@@ -9,10 +9,10 @@ input: _My_K1_KPline(numericSeries);
 input: _My_FOLIO_line(numericSeries);
 
 input: _SUSPEND_STR(trueFalsesimple);
-input: _ENABLE_SectionEND_Clp(trueFalsesimple);
+{input: _ENABLE_SectionEND_Clp(trueFalsesimple);}
 //系統設定
 
-//平倉條件
+//預設平倉條件
 ////多平倉
 //////k0停利
 cond[21] =high >=_My_K0_KPline
@@ -57,8 +57,26 @@ cond[29] =close >_My_K1_KPline
 			;
 
 ////通用多空平倉
-//////帳跌幅停損
-
+//////回檔比停利
+{variables: _ex_Upper(0);
+variables: _ex_Lower(0);
+if filled =0 then
+begin
+	_ex_Upper =0;
+	_ex_Lower =0;
+end else
+begin
+	if filled >0 then
+		_ex_Upper =maxList(_ex_Upper[1], high[1])
+	else _ex_Lower =minList(_ex_Lower[1], low[1]);
+end;
+	
+cond[31] =(filled =filled[1])
+			and (filled >0
+						and close <(open +_ex_Upper)*0.5) 
+					or (filled <0
+						and close >(open +_ex_Lower)*0.5);}
+						
 //////夜留倉日平
 cond[32] =night_pos_clp;
 
@@ -74,13 +92,13 @@ cond[33] =((open >=_My_FOLIO_line
 			)
 			;
 //////當沖預設
-variable: _folio_base(5);
+{variable: _folio_base(5);
 cond[34] =(filled >0
 		    	and (high -filledAvgPrice) >=_folio_base
 				and close <(open +high)*0.5) 
 			or (filled <0
 				and (low -filledAvgPrice) <=_folio_base*-1
-				and close >(open +low)*0.5);
+				and close >(open +low)*0.5);}
 //////極值鈍化
 {cond[34] =	;}
 //////
@@ -99,11 +117,11 @@ cond[37] =((filled >0
 //////停利_越過極值通道後反轉固定倍數
 {cond[38] =;}
 //////
-cond[39] =(trading_rest("_PeriodREST_midnight")
+{cond[39] =(trading_rest("_PeriodREST_midnight")
 				or trading_rest("_Endpoint_dayTrading")
 				)
 			and _ENABLE_SectionEND_Clp
-			and filled <>0;
+			and filled <>0;}
 cond[40] =_SUSPEND_STR
 			and filled <>0;
 

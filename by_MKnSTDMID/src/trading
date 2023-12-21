@@ -20,9 +20,9 @@ input: _ENABLE_LOGGER(TRUE, "啟動紀錄");
 
 //讀取K棒數
 //建議最小值為程式使用最大週期K棒數1.5~2倍
-//(5天30分K棒數=19*5=95)*1.5 =142 , *2=190
+//(5天30分K棒數=38*5=190)*1.5 =285 , *2=380
 //settotalBar(760);
-settotalBar(200);
+settotalBar(285);
 //[0-0_基本常數]
 variable: _clp_ratio(0.33); //以多方為基準
 variable: _shift_price(0); //滑價點數
@@ -386,7 +386,8 @@ begin
             _My_K1_KPline,
             _My_FOLIO_line,
 
-            _SUSPEND_STR
+            _SUSPEND_STR{,
+			_ENABLE_SectionEND_Clp}
 
     );
 
@@ -514,3 +515,4 @@ logger_multi("",
 if _SUSPEND_STR
 	and filled =0
 then raiseRunTimeError(_suspend_msg);
+
