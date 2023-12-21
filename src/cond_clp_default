@@ -1,4 +1,5 @@
 //cond_clp_default
+//預設平倉條件
 //傳入參數
 input: cond[_len](trueFalseArrayRef);
 
@@ -9,119 +10,90 @@ input: _My_K1_KPline(numericSeries);
 input: _My_FOLIO_line(numericSeries);
 
 input: _SUSPEND_STR(trueFalsesimple);
-{input: _ENABLE_SectionEND_Clp(trueFalsesimple);}
 //系統設定
 
-//預設平倉條件
-////多平倉
-//////k0停利
-cond[21] =high >=_My_K0_KPline
-			and filled >0
-			and filled <>filled[1]
-			and _My_K0_KPline <>0 
-			;
-//////停損
-cond[22] =open <_My_CL_STPline 
-			and close >_My_CL_STPline 
-			and filled >0
-			and _My_CL_STPline <>0
-			;
-//////單K極值停利
-{cond[23] =;}
-//////K1停利點
-cond[24] =close <_My_K1_KPline
-			and filled >0
-			and filled =filled[1]
-			and _My_K1_KPline <>0
-			;
-////空平倉
-//////k0停利
-cond[26] =low <=_My_K0_KPline
-			and filled <0
-			and filled <>filled[1]
-			and _My_K0_KPline <>0 
-			; 
-//////停損
-cond[27] =open >_My_CL_STPline 
-			and close <_My_CL_STPline 
-			and filled <0
-			and _My_CL_STPline <>0
-			;
-//////單K極值停利
-{cond[28]}
-//////K1停利點
-cond[29] =close >_My_K1_KPline 
-			and filled <0
-			and filled =filled[1]
-			and _My_K1_KPline <>0
-			;
+////多平倉 21~25
+if filled >0 then
+begin
+    //////停利
+    if close >filledAvgPrice then
+    begin
+        //////k0停利
+        cond[21] =high >=_My_K0_KPline
+		        	and filled <>filled[1]
+		        	and _My_K0_KPline <>0 
+	    	    	;
+        //////K1停利點
+        cond[22] =high >=_My_K1_KPline
+		        	and filled =filled[1]
+	    	    	and _My_K1_KPline <>0
+    		    	;
+    end;
 
-////通用多空平倉
-//////回檔比停利
-{variables: _ex_Upper(0);
-variables: _ex_Lower(0);
-if filled =0 then
-begin
-	_ex_Upper =0;
-	_ex_Lower =0;
-end else
-begin
-	if filled >0 then
-		_ex_Upper =maxList(_ex_Upper[1], high[1])
-	else _ex_Lower =minList(_ex_Lower[1], low[1]);
+    //////停損
+    if close <filledAvgPric then
+    begin
+        //////停損
+        cond[25] =close <_My_CL_STPline 
+	    	    	and _My_CL_STPline <>0;
+    end;
 end;
-	
-cond[31] =(filled =filled[1])
-			and (filled >0
-						and close <(open +_ex_Upper)*0.5) 
-					or (filled <0
-						and close >(open +_ex_Lower)*0.5);}
-						
-//////夜留倉日平
-cond[32] =night_pos_clp;
 
-//////獲利參考線平			
-cond[33] =((open >=_My_FOLIO_line 
-					and close <_My_FOLIO_line
-					and filled >0)
-				or ((open <=_My_FOLIO_line 
-						and close >_My_FOLIO_line
-						and filled <0))
-			and filled =filled[1]
-			and _My_FOLIO_line <>0
-			)
-			;
-//////當沖預設
-{variable: _folio_base(5);
-cond[34] =(filled >0
-		    	and (high -filledAvgPrice) >=_folio_base
-				and close <(open +high)*0.5) 
-			or (filled <0
-				and (low -filledAvgPrice) <=_folio_base*-1
-				and close >(open +low)*0.5);}
-//////極值鈍化
-{cond[34] =	;}
-//////
-{cond[35] =;}
-//////停損反向穿越極值帶
-{cond[36] =;}
-//////停損_反向穿越前極值
-cond[37] =((filled >0
-					and low <low[1]
-					)
-				or (filled <0
-					and high <high[1]
-					))
-			and filled =filled[1]
-			;
-//////停利_越過極值通道後反轉固定倍數
-{cond[38] =;}
-//////
-{cond[39] =(trading_rest("_PeriodREST_midnight")
-				or trading_rest("_Endpoint_dayTrading")
-				)
-			and _ENABLE_SectionEND_Clp
-			and filled <>0;}
-cond[40] =_SUSPEND_STR
-			and filled <>0;
+////空平倉 26~30
+if filled <0 then
+begin
+    //////停利
+    if close <filledAvgPrice then
+    begin
+        //////k0停利
+        cond[26] =low <=_My_K0_KPline
+		        	and filled <>filled[1]
+		        	and _My_K0_KPline <>0 
+		        	; 
+        //////K1停利點
+        cond[27] =low <_My_K1_KPline 
+    		    	and filled =filled[1]
+	    		    and _My_K1_KPline <>0
+    	    		;
+    //////停損
+    if close >filledAvgPric then
+    begin
+        //////停損
+        cond[30] =close >_My_CL_STPline 
+			        and _My_CL_STPline <>0
+			        ;
+    end;
 
+end;
+
+////通用多空平倉 31~40
+if filled <>0 then
+begin
+    //////夜留倉日平
+    cond[31] =night_pos_clp;
+
+    //////獲利參考線平			
+    cond[32] =((open <=_My_FOLIO_line 
+	    				and close >_My_FOLIO_line
+		    			and filled >0)
+			    	or ((open >=_My_FOLIO_line 
+				    		and close <_My_FOLIO_line
+					    	and filled <0))
+    			and filled =filled[1]
+    			and _My_FOLIO_line <>0
+	    		)
+		    	;
+    //////停損_反向穿越前極值
+    cond[33] =((filled >0
+	    				and low <low[1]
+		    			)
+			    	or (filled <0
+				    	and high <high[1]
+				    	))
+    			and filled =filled[1]
+	    		;
+    //////緊急停損並中止程式
+    cond[40] =_SUSPEND_STR
+	    		and filled <>0;
+
+end;

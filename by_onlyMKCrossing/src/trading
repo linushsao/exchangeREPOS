@@ -3,7 +3,7 @@
 input: _stdevSTAT(0.675, "定態區標差倍數");
 input: _stdevUNSTAT(1.645, "躍遷區標差倍數");
 input: _stdevUUNSTAT(1.959, "極值區標差倍數(預設2)");
-input: _qcLine_ratioT(1.959, "_qcLine標差倍數");
+input: _qcLine_ratioT(1.959, "K0出場標差倍數");
 input: _mkavgline(1, "趨勢(0)日(1)周(2)月 均線");
 input: _mkavgline_addone(0, "建平倉(0)日(1)周(2)月 均線");
 input: _ratioU(0.66,"前K回檔比例(多:0.66)");
@@ -252,17 +252,19 @@ variable: _My_CL_STPline(0);
 
 //登錄獲利參考線
 _My_FOLIO_line 	=_marketPrice_avg_RAW;
+
 //登錄進場線
+_My_CR_line_RAW =_folio_POS_Line;(含多空訊號)
 _My_CR_line     =absValue(_folio_POS_Line); 
-//登錄進場線(含多空訊號)	
-_My_CR_line_RAW =_folio_POS_Line; 
-//登錄平進循環線   			
-_My_RE_line 	=absValue(_folio_POS_LineRE);	
+
+//登錄K0停利點
+_My_K0_KPline   =iff(_My_CR_line_RAW >0, _qc_line_L, _qc_line_S);
 //登錄K1停利點
 _My_K1_KPline	=absValue(_folio_POS_LineCLP);
-//登錄K0停利點
-{_My_K0_KPline   =iff(_My_CR_line_RAW >0, _qc_line_L, _qc_line_S);}
-_My_K0_KPline   =_My_K1_KPline;
+
+//登錄平進循環線   			
+_My_RE_line 	=absValue(_folio_POS_LineRE);	
+
 //登錄停損點
 _My_CL_STPline	=absValue(_folio_POS_LineSTP);	
 
@@ -377,12 +379,9 @@ begin
 			_qc_longEX,
 			_qc_shortEX,
 
-			{_ENABLE_MorningClose,}
-			{_ENABLE_keepFolio,}
 			_ENABLE_SectionEND_Clp,
 			_SUSPEND_STR,
 			
-			{TRUE, //_ENABLE_LONG_PERIOD,}
 			_stdMID
 
 	);
@@ -396,8 +395,7 @@ begin
             _My_K1_KPline,
             _My_FOLIO_line,
 
-            _SUSPEND_STR{,
-			_ENABLE_SectionEND_Clp}
+            _SUSPEND_STR
 
     );
 
