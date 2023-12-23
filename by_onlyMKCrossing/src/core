@@ -26,6 +26,7 @@ variable: _myOPEND(0);
 variable: _avg_count(0);
 variable: _mkopd(0);
 variable: _avg_mkopd(0);
+variable: _marketPrice_avg_preWeekily_RAW(0);
 
 if time =084500 then
 begin
@@ -33,6 +34,10 @@ begin
     _myOPEND =open;
     _avg_count =0;
     _mkopd =0;
+
+    if open_weekily <>open_weekily[1] then //新週第一天早盤開盤K
+        _marketPrice_avg_preWeekily_RAW =_marketPrice_avg_RAW[1];                
+
 end else
 begin
     _avg_count =_avg_count +1;
@@ -107,7 +112,10 @@ begin
     _qc_stdw = squareRoot(_qc_diffq_sum/_len);
 
     //
-    _LS_ratio   =_marketPrice_avg_addone_RAW -open;
+    _LS_ratio   =iff(_marketPrice_avg_preWeekily_RAW =0,
+                        0,
+                        _marketPrice_avg_preWeekily_RAW -_marketPrice_avg_addone_RAW); //用於週1st早K
+
     _LS_mk_ratio=_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW;
 
     _range_L  =_qc_avg +_qc_stdw*_stdevSTAT;
