@@ -3,8 +3,6 @@ input: _stdevSTAT(numericSimple);
 input: _stdevUNSTAT(numericSimple);
 input: _stdevUUNSTAT(numericSimple);
 
-//input: _folio_base(numericSimple); //suggestion:5~10
-
 input: _marketPrice_avg_RAW(numericseries);         //line for trend
 input: _marketPrice_avg_addone_RAW(numericseries);  //line for CRP
 
@@ -265,6 +263,7 @@ _DEBUG_INFO =text(
 		 _switch_opd_S
 		 
 );
+
 
 
 

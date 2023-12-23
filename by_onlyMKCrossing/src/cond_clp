@@ -23,28 +23,54 @@ input: _SUSPEND_STR(trueFalsesimple);
 input: _stdMID(numericSeries);
 
 //系統設定
-variable: _folio_base(10);
+variable: _folio_base(0);
 variable: _Cl_LONG(0);
 variable: _Cl_SHORT(0);
-_Cl_LONG =filledAvgPrice +_base_folio; //多保本價
-_Cl_SHORT=filledAvgPrice -_base_folio; //空保本價
+if filled <>0 then
+begin
+	_folio_base =absValue(filledAvgPrice -_My_CL_STPline);
+	
+	_Cl_LONG =filledAvgPrice +_folio_base; //多保本價
+	_Cl_SHORT=filledAvgPrice -_folio_base; //空保本價
+end else 
+	begin
+		_Cl_LONG =0;
+		_Cl_SHORT=0;	
+	end;
+
 
 //平倉條件
 ///多平倉
 if filled >0 then
 begin
-////k1停利
+////k0停利
     cond[21] =high >=_Cl_LONG
-        and close <(open +_Cl_LONG)*0.5
+			and close <(open +high)*0.5
+			and filled <>filled[1]
+			and _Cl_LONG <>0
+                  ;
+////k1停利
+    cond[22] =high >=_Cl_LONG
+			and close <(open[1] +high)*0.5
+			and filled =filled[1]
+			and _Cl_LONG <>0
                   ;
 end;
 
 ///空平倉
 if filled <0 then
 begin
-////k1停利
+////k0停利
     cond[26] =low <=_Cl_SHORT
-        and close >(open +_Cl_SHORT)*0.5
+			and close >(open +low)*0.5
+			and filled <>filled[1]
+			and _Cl_SHORT <>0
+                  ;
+////k1停利
+    cond[27] =low <=_Cl_SHORT
+			and close >(open[1] +low)*0.5
+			and filled =filled[1]
+			and _Cl_SHORT <>0
                   ;
 end;		
 
@@ -60,4 +86,5 @@ cond[39] =(trading_rest("_PeriodREST_midnight")
 				)
 			and _ENABLE_SectionEND_Clp
 			and filled <>0;
+
 
