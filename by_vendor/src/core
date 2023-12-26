@@ -1,0 +1,162 @@
+//[0-1_備忘錄]
+//
+//[1-1_傳入函數之參數]
+input: _stdevSTAT(numericSimple);
+input: _stdevUNSTAT(numericSimple);
+input: _stdevUUNSTAT(numericSimple);
+
+input: _U2_STAT(numericSeries);
+input: _D2_STAT(numericSeries);
+
+input: _marketPrice_avg_RAW(numericseries);         //line for trend
+input: _marketPrice_avg_addone_RAW(numericseries);  //line for CRP
+
+input: _qc_ext_avg(numericseries);
+input: _qc_ext_stdw(numericSeries);
+
+input: _folio_POS_Line(numericREF);     //line for CRP
+input: _folio_POS_LineRE(numericREF);   //line for CRPRe
+input: _folio_POS_LineCLP(numericREF);  //line for CLP
+input: _folio_POS_LineSTP(numericREF);  //line for STP
+
+input: _DEBUG_INFO(stringRef);
+
+//[1-2_檢查傳入之核心參數]
+
+//[1-3_local參數建立與重置]
+
+//[1-4_特定檢查項目]
+////早開盤K檢查項目
+
+////設定策略使用之時段(早盤)
+variable: _time_sec(FALSE);
+_time_sec =time >084500
+			and time <150000;
+
+//[2-1_策略主體]
+////計算趨勢向量
+_LS_ratio=_marketPrice_avg_RAW -_stdMID;
+_mk_diff =_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW;
+
+////產生盤勢分析
+variable: _folio_base(10);
+variable: _switch_L(FALSE);
+variable: _switch_S(FALSE);
+variable: _range_L(0);
+variable: _range_S(0);
+variable: _range_LL(0);
+variable: _range_SS(0);
+
+////變數重置
+_switch_L       =FALSE;
+_switch_S       =FALSE;
+
+////計算機率區間漲跌幅
+_range_L  =_qc_ext_avg +_qc_ext_stdw*_stdevSTAT;
+_range_LL =_qc_ext_avg +_qc_ext_stdw*_stdevUNSTAT;
+_range_S  =_qc_ext_avg -_qc_ext_stdw*_stdevSTAT;
+_range_SS =_qc_ext_avg -_qc_ext_stdw*_stdevUNSTAT;
+
+////往多方
+if _range_L >_folio_base 
+	and _LS_ratio >0 then
+begin
+    //////多穿越型
+    _switch_L =_marketPrice_avg_RAW -open <_range_LL 
+                and open <_marketPrice_avg_RAW
+                and high >=_marketPrice_avg_RAW
+                and time[1] <>084500;
+    //多急漲型
+end;
+
+////往空方
+if _range_S <_folio_base*-1 
+	and _LS_ratio <0 then
+begin
+    //空穿越型
+    _switch_S =_marketPrice_avg_RAW -open >_range_SS
+                and open >_marketPrice_avg_RAW 
+                and low <=_marketPrice_avg_RAW
+                and time[1] <>084500;
+    //空急跌型
+end;
+
+//[3-1_產生各進出場線]
+////當位於策略生效時段
+if _time_sec then
+begin
+
+    ////穿越型
+	if _switch_L
+		or _switch_S then
+	begin
+		_folio_POS_Line =p_n(_LS_ratio) *_marketPrice_avg_RAW;
+	end;
+
+    ////Kn
+    if _folio_POS_Line =_folio_POS_Line[1] then
+    begin
+        ////產生出場線_folio_POS_LineCLP
+        _mk_CLP =iff(folio_POS_Line >0,
+                        _U2_STAT,
+                        _D2_STAT);
+
+        if (folio_POS_Line >0 
+                and open >_mk_CLP 
+                and low <_mk_CLP) 
+            or 
+            (_folio_POS_Line <0 
+                and open <_mk_CLP 
+                and high >_mk_CLP) then
+        begin
+            _folio_POS_LineCLP =_mk_CLP;
+        end;
+
+        ////產生平進循環線_folio_POS_LineRe
+        if (folio_POS_Line >0 
+                and open >_marketPrice_avg_RAW
+                and low <=_marketPrice_avg_RAW) 
+            or 
+            (folio_POS_Line <0
+                and open <_marketPrice_avg_RAW
+                and high >=_marketPrice_avg_RAW) then
+        begin
+            _folio_POS_LineRE =iff(folio_POS_Line >0,
+                                high[1],
+                                low[1]);
+        end;
+
+    end;
+
+    //產生停損線_folio_POS_LineSTP
+    ////如產生新的進場線
+	variable: _stp_line(0);
+	
+	if _folio_POS_Line <>_folio_POS_Line[1] then 
+	begin
+		_stp_line =open +iff(_folio_POS_Line >0, _range_S, _range_L);
+		_folio_POS_LineSTP =iff(_folio_POS_Line >0, minList(low[1], _stp_line), maxList(high[1], _stp_line));
+	end;
+end;
+
+
+_DEBUG_INFO =text(
+
+		 _qc_ext_avg, ",",
+		 _qc_ext_stdw, ",",
+		 _range_L, ",",
+		 _range_LL, ",",
+		 _range_S, ",",
+		 _range_SS, ",",
+
+		 _LS_ratio, ",",
+		 _mk_diff, ",",
+
+		 _switch_L, ",",
+		 _switch_S
+		 
+);
+
+
+
+

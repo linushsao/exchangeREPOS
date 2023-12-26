@@ -25,7 +25,8 @@ variable: _len(0);
 _len =intPortion(4.5*60/barInterval)*5; //for 早盤K棒數1week
 array_SetMaxIndex(_qc_array, _len);
 
-////早開盤檢查項目
+//[1-4_特定檢查項目]
+////早開盤K檢查項目
 variable: _myOPEND(0);
 variable: _avg_count(0);
 variable: _mkopd(0);
@@ -49,12 +50,13 @@ begin
     _avg_mkopd =_mkopd /_avg_count;
 end;
 
+////設定策略使用之時段(早盤)
 variable: _time_sec(FALSE);
-//策略使用之時段(早盤)
 _time_sec =time >084500
 			and time <150000;
 
-//收集資料
+//[2-1_策略主體]
+////收集特定時段內漲跌資料
 variable: _qc_diff(0);
 variable: _qc_counter(0);
 if currentbar >1 
@@ -68,7 +70,7 @@ begin
 	if _qc_counter <_len then _qc_counter +=1;
 end;
 
-//計算漲跌標差
+////計算漲跌資料標差
 variable: _qc_sum(0);
 variable: _qc_diffq_sum(0);
 
@@ -97,28 +99,29 @@ _qc_diffq_sum=0;
 if _qc_counter >=_len then //完成採樣數
 begin
     
-	///計算標準差
+	////計算標準差
+    //////計算總合
     for value1 =1 to _len
     begin
         _qc_sum =_qc_sum +_qc_array[value1];
     end;
-
+    //////計算平均
     _qc_avg =_qc_sum /_len;
-    
+    //////計算變異數
     for value1 =1 to _len
     begin
         _qc_diffq_sum =_qc_diffq_sum +square(_qc_array[value1] -_qc_avg);
     end;
-
+    //////計算標準差
     _qc_stdw = squareRoot(_qc_diffq_sum/_len);
 
-    //
+    //////計算趨勢向量
     _LS_ratio   =iff(_marketPrice_avg_preWeekily_RAW =0,
                         0,
                         _marketPrice_avg_preWeekily_RAW -_marketPrice_avg_addone_RAW); //用於週1st早K
 
     _LS_mk_ratio=_marketPrice_avg_RAW -_marketPrice_avg_addone_RAW;
-
+    //////計算機率區間漲跌幅
     _range_L  =_qc_avg +_qc_stdw*_stdevSTAT;
     _range_LL =_qc_avg +_qc_stdw*_stdevUNSTAT;
     _range_S  =_qc_avg -_qc_stdw*_stdevSTAT;

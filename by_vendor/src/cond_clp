@@ -1,0 +1,74 @@
+//
+input: cond[_len](trueFalseArrayRef);
+
+input: _My_CR_line(numericSeries);
+input: _My_K0_KPline(numericSeries);
+input: _My_CL_STPline(numericSeries);
+input: _My_K1_KPline(numericSeries);
+input: _qc_shortEX2(numericSeries);
+input: _qc_longEX2(numericSeries);
+input: _My_FOLIO_line(numericSeries);
+input: _extremes_Line_Upper(numericSeries);
+input: _extremes_Line_lower(numericSeries);
+input: _qc_long(numericSeries);
+input: _qc_short(numericSeries);
+input: _qc_longEX(numericSeries);
+input: _qc_shortEX(numericSeries);
+
+input: _ENABLE_SectionEND_Clp(trueFalsesimple);
+input: _SUSPEND_STR(trueFalsesimple);
+
+input: _stdMID(numericSeries);
+
+//系統設定
+
+//平倉條件
+///多平倉
+//k0停利
+{cond[21] =;}
+//停損
+{cond[22] =;}
+//單K極值停利
+{cond[23] =;}
+//K1停利點
+{cond[24] =;}
+///空平倉
+//k0停利
+{cond[26] =; }
+//停損
+{cond[27] =;}
+//單K極值停利
+{cond[28] =;}
+//K1停利點
+{cond[29] =;}
+		
+////通用多空平倉(長週期)
+//////帳跌幅停損
+cond[31] =((qcofK <_qc_shortEX and filled >0)
+				or (qcofK >_qc_longEX and filled <0))
+			and filled =filled[1]
+			;
+////
+{cond[32] =;}
+////			
+{cond[33] =;}
+////
+{cond[34] =;}
+//////極值鈍化
+{cond[34] =;}
+//////保本檢查.
+{cond[35] =;}
+//停損反向穿越極值帶
+{cond[36] =;}
+//停損_反向穿越前極值
+{cond[37] =;}
+//停利_越過極值通道後反轉固定倍數
+{cond[38] =;}
+/////
+cond[39] =(trading_rest("_PeriodREST_midnight")
+                 or trading_rest("_Endpoint_dayTrading")
+                 )
+             and _ENABLE_SectionEND_Clp
+             and filled <>0;
+
+{cond[40] =;}
