@@ -254,7 +254,7 @@ variable: _My_CL_STPline(0);
 _My_FOLIO_line 	=_marketPrice_avg_RAW;
 
 //登錄進場線
-_My_CR_line_RAW =_folio_POS_Line;(含多空訊號)
+_My_CR_line_RAW =_folio_POS_Line;//(含多空訊號)
 _My_CR_line     =absValue(_folio_POS_Line); 
 
 //登錄K0停利點
@@ -527,4 +527,3 @@ logger_multi("",
 if _SUSPEND_STR
 	and filled =0
 then raiseRunTimeError(_suspend_msg);
-

@@ -50,7 +50,7 @@ _time_check =(time >150000
 ////週1stDay趨勢向量基點設定
 if time =084500 then
 begin
-    if open_weekily <>open_weekily[1] then //新週第一天早盤開盤K
+    if openweekly <>openweekly[1] then //新週第一天早盤開盤K
         _marketPrice_avg_preWeekily_RAW =_marketPrice_avg_RAW[1];
 end;
 
@@ -126,50 +126,50 @@ begin
 end;
 
 //產生出場線及獲利基準線LineCLP/LineFOLIO
-	if (_switch_curr =_INNER_CROSSING 
-			or _switch_curr =_OUTTER_CROSSING) then
+if (_switch_curr =_INNER_CROSSING 
+		or _switch_curr =_OUTTER_CROSSING) then
+begin
+	if _switch_curr =_INNER_CROSSING then
 	begin
-		if _switch_curr =_INNER_CROSSING then
-		begin
-			if ((_folio_POS_Line >0
-						and high >=_marketPrice_avg_RAW) 
-					or (_folio_POS_Line <0
-							and low <=_marketPrice_avg_RAW)) then
-				_folio_POS_LineCLP =_marketPrice_avg_RAW;
-		end
-		else
-			_folio_POS_LineCLP =_stdMID +p_n(_folio_POS_Line)*_stdW*_stdevUNSTAT;
+		if ((_folio_POS_Line >0
+					and high >=_marketPrice_avg_RAW) 
+				or (_folio_POS_Line <0
+						and low <=_marketPrice_avg_RAW)) then
+			_folio_POS_LineCLP =_marketPrice_avg_RAW;
+	end
+	else
+		_folio_POS_LineCLP =_stdMID +p_n(_folio_POS_Line)*_stdW*_stdevUNSTAT;
 
-		_folio_POS_LineFOLIO=iff(_switch_curr =_INNER_CROSSING,
-									_marketPrice_avg_addone_RAW,
-									_marketPrice_avg_RAW);
-	end;
+	_folio_POS_LineFOLIO=iff(_switch_curr =_INNER_CROSSING,
+								_marketPrice_avg_addone_RAW,
+								_marketPrice_avg_RAW);
+end;
 
 //產生平進循環線LineRe
-	if _folio_POS_Line =_folio_POS_Line[1] 
-		and _folio_POS_Line[1] =_folio_POS_Line[2]then
+if _folio_POS_Line =_folio_POS_Line[1] 
+	and _folio_POS_Line[1] =_folio_POS_Line[2]then
+begin
+
+	if _switch_curr =_INNER_CROSSING 
+		and (( _folio_POS_Line >0
+					and low[1] <_folio_POS_LineFOLIO[1]) 
+				or ( _folio_POS_Line <0
+						and high[1] >_folio_POS_LineFOLIO[1])) then
 	begin
-	
-		if _switch_curr =_INNER_CROSSING 
+		_folio_POS_LineRE   =iff(_folio_POS_Line >0, high[1] , low[1]);
+	end
+	else if _switch_curr =_OUTTER_CROSSING     
 			and (( _folio_POS_Line >0
-						and low[1] <_folio_POS_LineFOLIO[1]) 
+						and low[1] <_folio_POS_LineFOLIO[1])
 					or ( _folio_POS_Line <0
 							and high[1] >_folio_POS_LineFOLIO[1])) then
 		begin
 			_folio_POS_LineRE   =iff(_folio_POS_Line >0, high[1] , low[1]);
-		end
-		else if _switch_curr =_OUTTER_CROSSING     
-				and (( _folio_POS_Line >0
-							and low[1] <_folio_POS_LineFOLIO[1])
-						or ( _folio_POS_Line <0
-								and high[1] >_folio_POS_LineFOLIO[1])) then
-			begin
-				_folio_POS_LineRE   =iff(_folio_POS_Line >0, high[1] , low[1]);
-			end;
-	end;
+		end;
+end;
 
 //產生停損線LineSTP
-	if _folio_POS_Line <>_folio_POS_Line[1] then 
-		_folio_POS_LineSTP =(iff(_folio_POS_Line >0, low[1], high[1]) 
-									+absValue(_folio_POS_Line))*0.5;
+if _folio_POS_Line <>_folio_POS_Line[1] then 
+	_folio_POS_LineSTP =(iff(_folio_POS_Line >0, low[1], high[1]) 
+								+absValue(_folio_POS_Line))*0.5;
 

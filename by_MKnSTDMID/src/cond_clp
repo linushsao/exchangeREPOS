@@ -197,4 +197,3 @@ cond[38] =((filled >0
 			and filled <>0;}
 {cond[40] =_SUSPEND_STR
 			and filled <>0;}
-

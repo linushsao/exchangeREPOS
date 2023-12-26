@@ -515,4 +515,3 @@ logger_multi("",
 if _SUSPEND_STR
 	and filled =0
 then raiseRunTimeError(_suspend_msg);
-

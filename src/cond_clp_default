@@ -31,7 +31,7 @@ begin
     end;
 
     //////停損
-    if close <filledAvgPric then
+    if close <filledAvgPrice then
     begin
         //////停損
         cond[25] =close <_My_CL_STPline 
@@ -55,8 +55,9 @@ begin
     		    	and filled =filled[1]
 	    		    and _My_K1_KPline <>0
     	    		;
+	end;
     //////停損
-    if close >filledAvgPric then
+    if close >filledAvgPrice then
     begin
         //////停損
         cond[30] =close >_My_CL_STPline 

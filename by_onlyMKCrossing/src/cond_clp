@@ -87,4 +87,3 @@ cond[39] =(trading_rest("_PeriodREST_midnight")
 			and _ENABLE_SectionEND_Clp
 			and filled <>0;
 
-
