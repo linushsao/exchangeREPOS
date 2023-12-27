@@ -543,7 +543,9 @@ logger_multi("",
 		
 		_return_info[1], ",",
 		_return_info[2], ",",
-		_return_info[3]
+		_return_info[3], ",",
+
+        _DEBUG_INFO
 		)
 	);
 
