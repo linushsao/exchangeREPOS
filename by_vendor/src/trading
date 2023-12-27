@@ -240,24 +240,26 @@ variable: _mkcqc_avg(0);
 variable: _mkcqc_stdw(0);
 
 by_onlyMKWstdMID_Crossing(
+
 		_stdevSTAT,
 		_stdevUNSTAT,
 		_stdevUUNSTAT,
 
-        _U2_STAT,
-        _D2_STAT,
+		_stdMID,
+		_U2_STAT,
+		_D2_STAT,
 
-		_marketPrice_avg_RAW,          //line for trend
-		_marketPrice_avg_addone_RAW,   //line for CRP
+		_marketPrice_avg_RAW,         //line for trend
+		_marketPrice_avg_addone_RAW,  //line for CRP
 
-        _qc_ext_avg,
-		_qc_ext_stdev,
+		_mkcqc_avg,
+		_mkcqc_stdw,
 
-		_folio_POS_Line, //line for CRP
-        _folio_POS_LineRE,
-		_folio_POS_LineCLP, //line for CLP
-		_folio_POS_LineSTP, //line for STP
-
+		_folio_POS_Line,     //line for CRP
+		_folio_POS_LineRE,   //line for CRPRe
+		_folio_POS_LineCLP,  //line for CLP
+		_folio_POS_LineSTP,  //line for STP
+		
 		_DEBUG_INFO
 
 );
@@ -385,7 +387,7 @@ cond_Crp_new(
 if filled <>0 then
 begin
 	//平倉條件
-	cond_Clp_cusMKC(
+	cond_Clp_MKWstdMID_Crossing(
 			cond,
 
 			_My_CR_line,
