@@ -37,7 +37,9 @@ _time_sec =TRUE;
 ////策略參數設置與初始化
 variable: _mk_CLP(0);
 variable: _switch_L(FALSE);
+variable: _switch_LD(FALSE);
 variable: _switch_S(FALSE);
+variable: _switch_SD(FALSE);
 variable: _range_L(0);
 variable: _range_S(0);
 variable: _range_LL(0);
@@ -51,29 +53,33 @@ _range_SS =_qc_ext_avg -_qc_ext_stdw*_stdevUNSTAT;
 
 ////計算趨勢向量
 variable: _LS_ratio(0);
-_LS_ratio=_marketPrice_avg_RAW -_stdMID;
+variable: _LS_addone_ratio(0);
+variable: _mk_diff(0);
+_LS_ratio		=_marketPrice_avg_RAW -_stdMID;
+_LS_addone_ratio=_marketPrice_avg_addone_RAW -_stdMID;
+_mk_diff 		=_marketPrice_avg_addone_RAW -_marketPrice_avg_RAW;
 
 ////往多方
-if _LS_ratio >0 then
-begin
-    //////多穿越型
-    _switch_L =_marketPrice_avg_RAW -open <_range_LL 
-                and open <_marketPrice_avg_RAW
-                and high >=_marketPrice_avg_RAW
-                and time[1] <>084500;
-    //多急漲型
-end;
+_switch_L =_LS_ratio >0
+			and open <_marketPrice_avg_RAW
+			and high >=_marketPrice_avg_RAW
+			and time[1] <>084500;
+_switch_LD =_mk_diff <>0
+			and _LS_addone_ratio >0
+			and open <_marketPrice_avg_addone_RAW
+			and high >=_marketPrice_avg_addone_RAW
+			and time[1] <>084500;
 
 ////往空方
-if _LS_ratio <0 then
-begin
-    //空穿越型
-    _switch_S =_marketPrice_avg_RAW -open >_range_SS
-                and open >_marketPrice_avg_RAW 
-                and low <=_marketPrice_avg_RAW
-                and time[1] <>084500;
-    //空急跌型
-end;
+_switch_S =_LS_ratio <0
+			and open >_marketPrice_avg_RAW 
+			and low <=_marketPrice_avg_RAW
+			and time[1] <>084500;
+_switch_SD =_mk_diff <>0
+			and _LS_addone_ratio <0
+			and open >_marketPrice_avg_addone_RAW 
+			and low <=_marketPrice_avg_addone_RAW
+			and time[1] <>084500;
 
 //[3-1_依策略運算產生各進出場線]
 ////當位於策略生效時段
@@ -85,8 +91,12 @@ begin
 		or _switch_S then
 	begin
 		_folio_POS_Line =p_n(_LS_ratio) *_marketPrice_avg_RAW;
+	end; 
+	if _switch_LD
+		or _switch_SD then
+	begin
+		_folio_POS_Line =p_n(_LS_addone_ratio) *_marketPrice_avg_addone_RAW;
 	end;
-
     ////Kn
     if _folio_POS_Line =_folio_POS_Line[1] then
     begin
