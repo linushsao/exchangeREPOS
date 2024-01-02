@@ -1,0 +1,100 @@
+//.
+Input: mode(string);
+
+//
+switch(mode)
+begin
+
+	//基本設定
+	case "HOURS_Daily" 				: basedata = 19 ; //一天交易小時數
+	//
+	case "TIME_Market_Daily" 		: basedata = 084500 ; //
+	case "TIME_Market_DailyLATER"	: basedata = 090000 ; //
+	case "TIME_Market_NightlyEARLY"	: basedata = 150000;//
+	case "TIME_Market_NightlyLATELY": basedata = 223000;//
+	case "TIME_Market_NightlyCLOSE" : basedata = 050000;//
+
+	case "Time_Section1_Start" 		: basedata = 084500;//
+	case "Time_Section1_End" 		: basedata = 134500;//
+	case "Time_Section2_Start" 		: basedata = 150000;//
+	case "Time_Section2_End" 		: basedata = 235959;//
+	case "Time_Section3_Start" 		: basedata = 000001;//
+	case "Time_Section3_End" 		: basedata = 050000;//
+	
+	case "PRICE_TXF"				: basedata = 50;//
+	case "PRICE_EXF"				: basedata = 500;//
+	case "period_weekily"			: basedata = intPortion((5*(4.5+9+4)*60)/barInterval);//
+	//PAIR_TRADING函數設定
+	//長周期界線
+	//標準差設定
+	case "stdevSTAT"				: basedata = 1; //定態區標差倍數
+	case "stdevUNSTAT"				: basedata = 1.645; //極值區標差倍數
+	//下單設定
+	//建平倉編碼
+{	case "Create_LongPosition" 		: basedata =  11 ; //做多建倉
+	case "Close_LongPosition" 		: basedata =  10 ; //做多平倉
+	case "CloseKP_LongPosition" 	: basedata =  101 ; //做多避險平倉
+	case "CloseSAFE_LongPosition" 	: basedata =  102 ; //做多收盤前安全平倉
+	case "CloseSL_LongPosition" 	: basedata =  103 ; //做多停損
+	case "Create_ShortPosition" 	: basedata = -11 ; //做空建倉
+	case "Close_ShortPosition" 		: basedata = -10 ; //做空平倉
+	case "CloseKP_ShortPosition" 	: basedata = -101 ; //做空避險平倉
+	case "CloseSAFE_ShortPosition" 	: basedata = -102 ; //做空收盤前安全平倉
+	case "CloseSL_ShortPosition" 	: basedata = -103 ; //做空停損
+	case "PORTFOLIO_AREA"			: basedata = 888 ; //建倉評估區}
+
+	//趨勢編碼
+	//選股設定
+	//RSI指標
+{	case "RSI_TREND_SWITCH"			: basedata = 10 ; //
+	case "RSI_OverBOUGHT"			: basedata = 20 ; //
+	case "RSI_OverSOLD"				: basedata = -20; //
+	case "_RSI_period"   			: basedata = 6; //RSI週期	
+	case "_sma_period"				: basedata = 5; //RSIMA週期
+	case "RSI_CEILING"				: basedata = 70; //
+	case "RSI_FLOOR"				: basedata = 50; //
+	case "RSI_LONG" 				: basedata = 1; //
+	case "RSI_SHORT"				: basedata = -1; //
+	case "RSI_LONG_reSTART"			: basedata = 11; //
+	case "RSI_SHORT_reSTART"		: basedata = -11; //}
+	//布林指標
+	//自然對數係數
+	case "e_ratio"					: basedata = 0.37 ; //
+	//林納帶參數
+	//DEBUG設定
+{	case "IF_DEBUG"					: basedata = 1  ; //(T)1 (F)-1}
+	//極星指標
+	//價量指標
+	//大盤同步率
+{	case "SYNC_withMARKET_PERIOD"   : basedata = 3; //
+	case "SYNC_CHECK_METHOD"        : basedata = 0; //(0)coefficientR (1)correlation}
+	//相關性檢驗
+	//偵錯相關
+	//MA設定
+	//OPD設定
+	//極值通道
+{	case "ex_path_period"			: basedata = 30; //	}
+	//標差相關
+	//雜項設定
+{	case "group_num"				: basedata = 13; //	
+	case "BigTrend_Triggrt" 		: basedata = 0.1; //
+	case "date_start" 				: basedata = 20180101; //績效基準日
+	case "WRIGHT1" 					: basedata = 1; //權重1定義
+	case "WRIGHT2" 					: basedata = 3; //權重2定義
+	case "WRIGHT3" 					: basedata = 5; //權重3定義
+	case "dayWeek"					: basedata = 5; //周線定義
+	case "dayWeek_Double"			: basedata = 10; //雙周線定義
+	case "dayMonth" 				: basedata = 20; //月線定義
+	case "daySeason"				: basedata = 60; //季線定義
+	case "PRICESoaring_Limited" 	: basedata = 0.0075; //個股1根K暴漲之定義 0.75%
+	case "COR_LEVEL1" 				: basedata = 0.33 ; 	//一級相關(相悖)值
+	case "COR_LEVEL2" 				: basedata = 0.66 ; //二級相關(相悖)值
+	case "COR_LEVEL3" 				: basedata = 1 ; //三級相關(相悖)值
+	case "COR_LEVEL_FILTER" 		: basedata = 1 ; //選股過濾值
+	case "COR_LEVEL_PERIOD_FILTER" 	: basedata = 10 ; //選股檢驗最少時間(分鐘)}
+	
+	//
+	default							: 
+										basedata = 0 ;
+										raiseRunTimeError(text("引數有誤: ", mode));
+end;

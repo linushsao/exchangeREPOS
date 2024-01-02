@@ -1,0 +1,26 @@
+
+//
+variable: _amount(0);
+//1d =19hr
+//
+variable: _hrs_of_day(0);
+_hrs_of_day =baseData("HOURS_Daily");
+//
+if barfreq ="D" //1月
+then _amount =20 
+else if barfreq ="W" //4周*6=0.5年
+then _amount =24 
+else if barfreq ="M" //1月*12=1年
+then _amount =12 
+else if barfreq ="Min"
+then
+begin
+	if barInterval =30 then _amount =_hrs_of_day*60/barInterval //1天
+	else if barInterval =60 then _amount =_hrs_of_day*60/barInterval //1天(1d=19)
+	else if barInterval =120 then _amount =_hrs_of_day*3*60/barInterval //3天(1d=9.5)
+	else if barInterval =15 then _amount =4*60/barInterval //4hr
+	else if barInterval =5 then _amount =4*60/barInterval //4hr
+	else raiseRunTimeError("無支援當前頻率設定，請確認");
+end;
+
+getSTDEV_MID =_amount;

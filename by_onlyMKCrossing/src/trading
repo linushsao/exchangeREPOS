@@ -1,17 +1,15 @@
-//
+//subject:by_onlyMKCrossing
 //[0-1_參數設定區 ]
 input: _stdevSTAT(0.675, "定態區標差倍數");
 input: _stdevUNSTAT(1.645, "躍遷區標差倍數");
 input: _stdevUUNSTAT(1.959, "極值區標差倍數(預設2)");
-input: _qcLine_ratioT(1.959, "K0出場標差倍數");
 input: _mkavgline(1, "趨勢(0)日(1)周(2)月 均線");
 input: _mkavgline_addone(0, "建平倉(0)日(1)周(2)月 均線");
+input: _qcLine_ratioT(1.645, "_qcLine標差倍數");
 input: _ratioU(0.66,"前K回檔比例(多:0.66)");
 input: _ratioD(0.33,"前K回檔比例(空:0.33)");
-input: _e_path_period(4, "區間極值期數");
+input: _e_path_period(0, "區間極值期數(0表預設)");
 input: _time_CrP(0, "建倉時段(0_無/1_台指日盤/2_台指夜盤美前/3_台指夜盤美股)，負數表除外");
-{input: _ENABLE_MorningClose(TRUE, "檢查早開盤K平倉");}
-{input: _ENABLE_keepFolio(TRUE, "啟動保本模式");}
 input: _ENABLE_SectionEND_Clp(TRUE, "啟動時段結束平倉模式");
 input: _ENABLE_DEBUG(FALSE, "除錯模式");
 input: _ENABLE_LOGGER(TRUE, "啟動紀錄");
@@ -86,7 +84,7 @@ variables: _extremes_Line_Upper(0);
 variables: _extremes_Line_Mid(0);
 variables: _extremes_Line_lower(0);
 e_path(
-	_e_path_period,
+	iff(_e_path_period >0, _e_path_period, 8),
 	_extremes_Line_Upper,
 	_extremes_Line_Mid,
 	_extremes_Line_lower
@@ -150,17 +148,13 @@ _qc_longEX =_qc_avg +_qc_stdev*_stdevUNSTAT;
 _qc_shortEX =_qc_avg -_qc_stdev*_stdevUNSTAT;
 _qc_longEX2 =_qc_avg +_qc_stdev*_stdevUUNSTAT;
 _qc_shortEX2 =_qc_avg -_qc_stdev*_stdevUUNSTAT;
-//
-variable: _qc_line_long(0);
-variable: _qc_line_short(0);
-_qc_line_long =_qc_avg +_qc_stdev*_qcLine_ratioT;
-_qc_line_short =_qc_avg -_qc_stdev*_qcLine_ratioT;
-//
+
+//K0停利點
 variable: _qc_line(0);
 variable: _qc_line_L(0);
 variable: _qc_line_S(0);
-_qc_line_L =open + _qc_line_long;
-_qc_line_S =open + _qc_line_short;
+_qc_line_L =open + (_qc_avg +_qc_stdev*_qcLine_ratioT);
+_qc_line_S =open + (_qc_avg -_qc_stdev*_qcLine_ratioT);
 //
 variable: _vol_bband(0);
 _vol_bband =stdevBand_gen(volume, getSTDEV_MID);
@@ -224,10 +218,20 @@ by_onlyMKCrossing(
 		_stdevUNSTAT,
 		_stdevUUNSTAT,
 
+		_stdMID,
+		_stdW,
+
+		_qc_line_L,
+		_qc_line_S,
+		
+		_extremes_Line_Upper,
+		_extremes_Line_lower,
+		
 		_marketPrice_avg_RAW,          //line for trend
 		_marketPrice_avg_addone_RAW,   //line for CRP
 
 		_folio_POS_Line, //line for CRP
+		_folio_POS_LineRE,
 		_folio_POS_LineCLP, //line for CLP
 		_folio_POS_LineSTP, //line for STP
 		
@@ -362,30 +366,7 @@ cond_Crp_new(
 if filled <>0 then
 begin
 	//平倉條件
-	cond_Clp_cusMKC(
-			cond,
-
-			_My_CR_line,
-			_My_K0_KPline,
-			_My_CL_STPline,
-			_My_K1_KPline,
-			_qc_shortEX2,
-			_qc_longEX2,
-			_My_FOLIO_line,
-			_extremes_Line_Upper,
-			_extremes_Line_lower,
-			_qc_long,
-			_qc_short,
-			_qc_longEX,
-			_qc_shortEX,
-
-			_ENABLE_SectionEND_Clp,
-			_SUSPEND_STR,
-			
-			_stdMID
-
-	);
-
+	//預設通用條件
     cond_clp_default(
             cond_default,
 
@@ -398,6 +379,31 @@ begin
             _SUSPEND_STR
 
     );
+	//策略專用條件
+	cond_Clp_cusMKC(
+			cond,
+
+			_My_CR_line,
+			_My_K0_KPline,
+			_My_CL_STPline,
+			_My_K1_KPline,
+			_qc_shortEX2,
+			_qc_longEX2,
+			_My_FOLIO_line,
+			_extremes_Line_Upper,
+			_extremes_Line_lower,
+			
+			_qc_long,
+			_qc_short,
+			_qc_line_L,
+			_qc_line_S,
+
+			_ENABLE_SectionEND_Clp,
+			_SUSPEND_STR,
+			
+			_stdMID
+
+	);
 
 end;
 

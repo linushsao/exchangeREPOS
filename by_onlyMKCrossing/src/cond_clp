@@ -12,10 +12,11 @@ input: _qc_longEX2(numericSeries);
 input: _My_FOLIO_line(numericSeries);
 input: _extremes_Line_Upper(numericSeries);
 input: _extremes_Line_lower(numericSeries);
+
 input: _qc_long(numericSeries);
 input: _qc_short(numericSeries);
-input: _qc_longEX(numericSeries);
-input: _qc_shortEX(numericSeries);
+input: _qc_line_L(numericSeries);
+input: _qc_line_S(numericSeries);
 
 input: _ENABLE_SectionEND_Clp(trueFalsesimple);
 input: _SUSPEND_STR(trueFalsesimple);
@@ -55,6 +56,11 @@ begin
 			and filled =filled[1]
 			and _Cl_LONG <>0
                   ;
+    cond[23] =high >=_qc_line_L
+			and close <(filledAvgPrice +high)*0.5
+			and filled =filled[1]
+			and _qc_line_L <>0
+                  ;
 end;
 
 ///空平倉
@@ -71,6 +77,11 @@ begin
 			and close >(open[1] +low)*0.5
 			and filled =filled[1]
 			and _Cl_SHORT <>0
+                  ;
+    cond[28] =low <=_qc_line_S
+			and close >(filledAvgPrice +low)*0.5
+			and filled =filled[1]
+			and _qc_line_S <>0
                   ;
 end;		
 

@@ -20,11 +20,16 @@ begin
     begin
         //////k0停利
         cond[21] =high >=_My_K0_KPline
+					and close <(filledAvgPrice +high)*0.5
 		        	and filled <>filled[1]
 		        	and _My_K0_KPline <>0 
 	    	    	;
-        //////K1停利點
+        //////Kx停利點
         cond[22] =high >=_My_K1_KPline
+					and ((open <_My_K1_KPline
+								and close <(open +high)*0.5)
+							or (open >_My_K1_KPline
+								and close <(_My_K1_KPline +high)*0.5))
 		        	and filled =filled[1]
 	    	    	and _My_K1_KPline <>0
     		    	;
@@ -33,9 +38,14 @@ begin
     //////停損
     if close <filledAvgPrice then
     begin
-        //////停損
-        cond[25] =close <_My_CL_STPline 
-	    	    	and _My_CL_STPline <>0;
+        //////k0停損
+        cond[24] =close <_My_CL_STPline 
+	    	    	and _My_CL_STPline <>0
+					{and filled <>filled[1]};
+        //////kx停損
+       { cond[25] =close <(_My_CL_STPline +filledAvgPrice)*0.5
+	    	    	and _My_CL_STPline <>0
+					and filled =filled[1];}
     end;
 end;
 
@@ -47,11 +57,16 @@ begin
     begin
         //////k0停利
         cond[26] =low <=_My_K0_KPline
+					and close >(filledAvgPrice +low)*0.5
 		        	and filled <>filled[1]
 		        	and _My_K0_KPline <>0 
 		        	; 
-        //////K1停利點
+        //////Kx停利點
         cond[27] =low <_My_K1_KPline 
+					and ((open >_My_K1_KPline
+							and close >(open +low)*0.5)
+						or (open <_My_K1_KPline
+							and close >(_My_K1_KPline +low)*0.5))
     		    	and filled =filled[1]
 	    		    and _My_K1_KPline <>0
     	    		;
@@ -59,10 +74,16 @@ begin
     //////停損
     if close >filledAvgPrice then
     begin
-        //////停損
-        cond[30] =close >_My_CL_STPline 
+        //////k0停損
+        cond[29] =close >_My_CL_STPline 
 			        and _My_CL_STPline <>0
+					{and filled <>filled[1]}
 			        ;
+        //////kx停損
+        {cond[30] =close >(_My_CL_STPline +filledAvgPrice)*0.5
+			        and _My_CL_STPline <>0
+					and filled =filled[1]
+			        ;}
     end;
 
 end;
@@ -86,10 +107,10 @@ begin
 		    	;
     //////停損_反向穿越前極值
     cond[33] =((filled >0
-	    				and low <low[1]
+	    				and low <open[1]
 		    			)
 			    	or (filled <0
-				    	and high <high[1]
+				    	and high <open[1]
 				    	))
     			and filled =filled[1]
 	    		;
