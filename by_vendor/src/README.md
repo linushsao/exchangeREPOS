@@ -1,1 +1,0 @@
-by_MKweekilyCrossing_from_stdmin
